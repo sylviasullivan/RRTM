@@ -180,8 +180,6 @@
     ! 1.0 Constituent properties
     !--------------------------------
 
-    IF (ltimer) CALL timer_start(timer_rrtm_prep)
-
     !
     ! --- control for infintesimal cloud fractions
     !
@@ -317,133 +315,48 @@
         ENDDO
       ENDDO
     ENDDO
-    
-    IF (lrad_aero_diag) THEN
-      CALL rad_aero_diag (                                  &
-      & jg              ,jb              ,jce             , &
-      & kbdim           ,klev            ,jpband          , &
-      & jpsw            ,aer_tau_lw_vr   ,aer_tau_sw_vr   , &
-      & aer_piz_sw_vr   ,aer_cg_sw_vr                       )
-    END IF
 
-    IF (irad == 1) THEN
-      CALL newcld_optics(                                                       &
-        & jce          ,kbdim        ,klev         ,jpband       ,jpsw         ,&
-        & zglac        ,zland        ,ktype        ,icldlyr      ,tk_fl_vr     ,&
-        & zlwp_vr      ,ziwp_vr      ,zlwc_vr      ,ziwc_vr      ,cdnc_vr      ,&
-        & cld_tau_lw_vr,cld_tau_sw_vr,cld_piz_sw_vr,cld_cg_sw_vr                )
-    ELSE
-      DO jl = 1,jce
-        IF (zland(jl) >= 0.5_wp) THEN
-          laland(jl) = .TRUE.
-        ELSE
-          laland(jl) = .FALSE.
-        ENDIF
-        IF (zglac(jl) >= 0.5_wp) THEN
-          laglac(jl) = .TRUE.
-        ELSE
-          laglac(jl) = .FALSE.
-        ENDIF
-      ENDDO
-      CALL psrad_cloud_optics(                                          &
-         & laglac        ,laland        ,jce           ,kbdim          ,& 
-         & klev          , ktype        ,&
-         & icldlyr       ,zlwp_vr       ,ziwp_vr       ,zlwc_vr        ,&
-         & ziwc_vr       ,cdnc_vr       ,cld_tau_lw_vr ,cld_tau_sw_vr  ,&
-         & cld_piz_sw_vr ,cld_cg_sw_vr  ,re_drop       ,re_cryst    )  
-    ENDIF
-
-    IF (ltimer) CALL timer_stop(timer_rrtm_prep)
+    CALL newcld_optics(                                                       &
+      & jce          ,kbdim        ,klev         ,jpband       ,jpsw         ,&
+      & zglac        ,zland        ,ktype        ,icldlyr      ,tk_fl_vr     ,&
+      & zlwp_vr      ,ziwp_vr      ,zlwc_vr      ,ziwc_vr      ,cdnc_vr      ,&
+      & cld_tau_lw_vr,cld_tau_sw_vr,cld_piz_sw_vr,cld_cg_sw_vr                )
 
     !
     ! 4.0 Radiative Transfer Routines
     ! --------------------------------
-    IF (ltimer) CALL timer_start(timer_lrtm)
-    IF (irad == 1) THEN
-      CALL lrtm(                                                                &
-        !    input
-        &    jce             ,klev                                             ,&
-        &    pm_fl_vr        ,pm_sfc          ,tk_fl_vr        ,tk_hl_vr       ,&
-        &    tk_sfc          ,wkl_vr          ,wx_vr           ,col_dry_vr     ,&
-        &    zsemiss         ,cld_frc_vr      ,cld_tau_lw_vr   ,aer_tau_lw_vr  ,&
-        !    output
-        &    flx_uplw_vr     ,flx_dnlw_vr     ,flx_uplw_clr_vr,flx_dnlw_clr_vr )
-    ELSE
-      ! Seeds for random numbers come from least significant digits of pressure field 
-      !
-      rnseeds(1:jce,1:rng_seed_size) = (pm_fl_vr(1:jce,1:rng_seed_size) -  &
-         int(pm_fl_vr(1:jce,1:rng_seed_size)))* 1E9
-      CALL psrad_lrtm(jce                                                       ,&
-           & kbdim           ,klev            ,pm_fl_vr        ,pm_sfc          ,&
-           & tk_fl_vr        ,tk_hl_vr        ,tk_sfc          ,wkl_vr          ,&
-           & wx_vr           ,col_dry_vr      ,zsemiss         ,cld_frc_vr      ,&
-           & cld_tau_lw_vr   ,aer_tau_lw_vr   ,rnseeds         ,flx_uplw_vr     ,&     
-           & flx_dnlw_vr     ,flx_uplw_clr_vr ,flx_dnlw_clr_vr )
-    ENDIF
-    IF (ltimer) CALL timer_stop(timer_lrtm)
+    CALL lrtm(                                                                &
+      !    input
+      &    jce             ,klev                                             ,&
+      &    pm_fl_vr        ,pm_sfc          ,tk_fl_vr        ,tk_hl_vr       ,&
+      &    tk_sfc          ,wkl_vr          ,wx_vr           ,col_dry_vr     ,&
+      &    zsemiss         ,cld_frc_vr      ,cld_tau_lw_vr   ,aer_tau_lw_vr  ,&
+      !    output
+      &    flx_uplw_vr     ,flx_dnlw_vr     ,flx_uplw_clr_vr,flx_dnlw_clr_vr )
 
 
-    IF (ltimer) CALL timer_start(timer_srtm)
-    IF (irad == 1) THEN
-      CALL srtm_srtm_224gp(                                                     &
-        !    input
-        &    jce             ,kbdim           ,klev            ,jpsw           ,&
-        &    alb_vis_dir     ,alb_nir_dir     ,alb_vis_dif     ,alb_nir_dif    ,&
-        &    pm_fl_vr        ,tk_fl_vr        ,pmu0                            ,&
-        &    col_dry_vr      ,wkl_vr                                           ,&
-        &    cld_frc_vr      ,cld_tau_sw_vr   ,cld_cg_sw_vr    ,cld_piz_sw_vr  ,&
-        &    aer_tau_sw_vr   ,aer_cg_sw_vr    ,aer_piz_sw_vr                   ,&
-        &    ssi_radt                                                          ,&
-        !    output
-        &    flx_dnsw        ,flx_upsw        ,flx_dnsw_clr    ,flx_upsw_clr,   &
-        !    optional output
-        &    flxd_dff_sfc=flx_dnsw_diff_sfc ,                                   &
-        &    flxd_par_sfc    = flx_dnpar_sfc,                                   &
-        &    vis_frc_sfc     = vis_frc_sfc,                                     &
-        &    nir_dff_frc_sfc = nir_dff_frc_sfc,                                 &
-        &    vis_dff_frc_sfc = vis_dff_frc_sfc,                                 &
-        &    par_dff_frc_sfc = par_dff_frc_sfc                                  )
-    ELSE
-      ! Reset random seeds so SW doesn't depend on what's happened in LW but is also independent
-      !
-      rnseeds(1:jce,1:rng_seed_size) = (pm_fl_vr(1:jce,rng_seed_size:1:-1) - &
-         int(pm_fl_vr(1:jce,rng_seed_size:1:-1)))* 1E9
-      WHERE (pmu0(1:jce) > 0.0_wp)
-         zdayfrc(1:jce) = 1.0_wp
-      ELSEWHERE
-         zdayfrc(1:jce) = 0.0_wp
-      END WHERE
-      zmu0(1:jce) = MAX(pmu0(1:jce),0.05_wp)
-      
-      !
-      CALL psrad_srtm(jce                                                      , & 
-         &  kbdim           ,klev            ,pm_fl_vr        ,tk_fl_vr        , &
-         &  wkl_vr          ,col_dry_vr      ,alb_vis_dir     ,alb_vis_dif     , &
-         &  alb_nir_dir     ,alb_nir_dif     ,zmu0, zdayfrc   ,ssi_radt/psctm  , &
-         &  psctm           ,cld_frc_vr      ,cld_tau_sw_vr   ,cld_cg_sw_vr    , &
-         &  cld_piz_sw_vr   ,aer_tau_sw_vr   ,aer_cg_sw_vr    ,aer_piz_sw_vr   , & 
-         &  rnseeds         ,flx_dnsw        ,flx_upsw        ,flx_dnsw_clr    , &
-         & flx_upsw_clr     ,aux_out(:,1)    ,aux_out(:,2)    ,aux_out(:,3)    , &
-         &  aux_out(:,4)    ,aux_out(:,5)    ,aux_out(:,6)    ,aux_out(:,7)    , &
-         aux_out(:,8)    ,aux_out(:,9) )
-
-      !   dnpar_sfc        = dnpar_sfc_dir    + dnpar_sfc_dif                 
-      flx_dnpar_sfc(1:jce) = aux_out(1:jce,2) + aux_out(1:jce,5)
-
-      ! Reset solar fluxes to zero at dark points
-      DO jl = 1, jce
-        IF (pmu0(jl) <= 0._wp) THEN
-          flx_dnsw(jl,:) = 0._wp
-          flx_upsw(jl,:) = 0._wp
-        ENDIF
-      ENDDO
-    ENDIF
-    IF (ltimer) CALL timer_stop(timer_srtm)
+    CALL srtm_srtm_224gp(                                                     &
+      !    input
+      &    jce             ,kbdim           ,klev            ,jpsw           ,&
+      &    alb_vis_dir     ,alb_nir_dir     ,alb_vis_dif     ,alb_nir_dif    ,&
+      &    pm_fl_vr        ,tk_fl_vr        ,pmu0                            ,&
+      &    col_dry_vr      ,wkl_vr                                           ,&
+      &    cld_frc_vr      ,cld_tau_sw_vr   ,cld_cg_sw_vr    ,cld_piz_sw_vr  ,&
+      &    aer_tau_sw_vr   ,aer_cg_sw_vr    ,aer_piz_sw_vr                   ,&
+      &    ssi_radt                                                          ,&
+      !    output
+      &    flx_dnsw        ,flx_upsw        ,flx_dnsw_clr    ,flx_upsw_clr,   &
+      !    optional output
+      &    flxd_dff_sfc=flx_dnsw_diff_sfc ,                                   &
+      &    flxd_par_sfc    = flx_dnpar_sfc,                                   &
+      &    vis_frc_sfc     = vis_frc_sfc,                                     &
+      &    nir_dff_frc_sfc = nir_dff_frc_sfc,                                 &
+      &    vis_dff_frc_sfc = vis_dff_frc_sfc,                                 &
+      &    par_dff_frc_sfc = par_dff_frc_sfc                                  )
 
 
     ! 5.0 Post Processing
     ! --------------------------------
-    IF (ltimer) CALL timer_start(timer_rrtm_post)
 
     DO jk = 1, klev+1
       jkb = klev+2-jk
@@ -463,7 +376,5 @@
       !   dnsw_diff_sfc        = vis_dn_dff_sfc   + nir_dn_dff_sfc
       flx_dnsw_diff_sfc(1:jce) = aux_out(1:jce,4) + aux_out(1:jce,6)
 !!$    sw_irr_toa(1:jce)       = flx_dnsw(1:jce,1)
-    !
-    IF (ltimer) CALL timer_stop(timer_rrtm_post)
 
   END SUBROUTINE rrtm_interface
