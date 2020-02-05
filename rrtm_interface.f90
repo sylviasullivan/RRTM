@@ -144,8 +144,6 @@
 
     REAL(wp) :: tune_dust(kbdim,jpband)  ! local variable for LW absorption tuning of dust
 
-    CHARACTER(LEN=3)     :: c_irad_aero
-
     ! Additional fields needed for PSRAD call
     LOGICAL ::                         &
          laland(kbdim),                & !< land sea mask, land=.true.
@@ -268,113 +266,58 @@
     ! --------------------------------
     ppd_hl(1:jce,:) = pp_hl(1:jce,2:klev+1)-pp_hl(1:jce,1:klev)
 
-    SELECT CASE (irad_aero)
-    CASE (0,2)
-      aer_tau_lw_vr(:,:,:) = 0.0_wp
-      aer_tau_sw_vr(:,:,:) = 0.0_wp
-      aer_piz_sw_vr(:,:,:) = 1.0_wp
-      aer_cg_sw_vr(:,:,:)  = 0.0_wp
-    CASE (5,6)
-      IF (PRESENT(dust_tunefac)) THEN
-        tune_dust(1:jce,1:jpband) = dust_tunefac(1:jce,1:jpband)
-      ELSE
-        tune_dust(1:jce,1:jpband) = 1._wp
-      ENDIF
-      DO jspec=1,jpband
-        DO jk=1,klev
-          jkb = klev+1-jk
-          DO jl = 1,jce
-            ! LW opt thickness of aerosols
-            aer_tau_lw_vr(jl,jk,jspec) =  zaeq1(jl,jkb) * zaea_rrtm(jspec,1) &
-              &                         + zaeq2(jl,jkb) * zaea_rrtm(jspec,2) &
-              &   + tune_dust(jl,jspec) * zaeq3(jl,jkb) * zaea_rrtm(jspec,3) &
-              &                         + zaeq4(jl,jkb) * zaea_rrtm(jspec,4) &
-              &                         + zaeq5(jl,jkb) * zaea_rrtm(jspec,5)
-          ENDDO
+    IF (PRESENT(dust_tunefac)) THEN
+       tune_dust(1:jce,1:jpband) = dust_tunefac(1:jce,1:jpband)
+    ELSE
+      tune_dust(1:jce,1:jpband) = 1._wp
+    ENDIF
+    DO jspec=1,jpband
+      DO jk=1,klev
+        jkb = klev+1-jk
+        DO jl = 1,jce
+          ! LW opt thickness of aerosols
+          aer_tau_lw_vr(jl,jk,jspec) =  zaeq1(jl,jkb) * zaea_rrtm(jspec,1) &
+            &                         + zaeq2(jl,jkb) * zaea_rrtm(jspec,2) &
+            &   + tune_dust(jl,jspec) * zaeq3(jl,jkb) * zaea_rrtm(jspec,3) &
+            &                         + zaeq4(jl,jkb) * zaea_rrtm(jspec,4) &
+            &                         + zaeq5(jl,jkb) * zaea_rrtm(jspec,5)
         ENDDO
       ENDDO
-      DO jspec=1+jpband,jpband+jpsw
-        DO jk=1,klev
-          jkb = klev+1-jk
-          DO jl = 1,jce
+    ENDDO
+    DO jspec=1+jpband,jpband+jpsw
+      DO jk=1,klev
+        jkb = klev+1-jk
+        DO jl = 1,jce
 
-            z_sum_aea = zaeq1(jl,jkb) * zaea_rrtm(jspec,1) &
-              &       + zaeq2(jl,jkb) * zaea_rrtm(jspec,2) &
-              &       + zaeq3(jl,jkb) * zaea_rrtm(jspec,3) &
-              &       + zaeq4(jl,jkb) * zaea_rrtm(jspec,4) &
-              &       + zaeq5(jl,jkb) * zaea_rrtm(jspec,5)
+          z_sum_aea = zaeq1(jl,jkb) * zaea_rrtm(jspec,1) &
+            &       + zaeq2(jl,jkb) * zaea_rrtm(jspec,2) &
+            &       + zaeq3(jl,jkb) * zaea_rrtm(jspec,3) &
+            &       + zaeq4(jl,jkb) * zaea_rrtm(jspec,4) &
+            &       + zaeq5(jl,jkb) * zaea_rrtm(jspec,5)
 
-            z_sum_aes = zaeq1(jl,jkb) * zaes_rrtm(jspec,1) &
-              &       + zaeq2(jl,jkb) * zaes_rrtm(jspec,2) &
-              &       + zaeq3(jl,jkb) * zaes_rrtm(jspec,3) &
-              &       + zaeq4(jl,jkb) * zaes_rrtm(jspec,4) &
-              &       + zaeq5(jl,jkb) * zaes_rrtm(jspec,5)
+          z_sum_aes = zaeq1(jl,jkb) * zaes_rrtm(jspec,1) &
+            &       + zaeq2(jl,jkb) * zaes_rrtm(jspec,2) &
+            &       + zaeq3(jl,jkb) * zaes_rrtm(jspec,3) &
+            &       + zaeq4(jl,jkb) * zaes_rrtm(jspec,4) &
+            &       + zaeq5(jl,jkb) * zaes_rrtm(jspec,5)
 
-            ! sw aerosol optical thickness
-            aer_tau_sw_vr(jl,jk,jspec-jpband) = z_sum_aea + z_sum_aes
+          ! sw aerosol optical thickness
+          aer_tau_sw_vr(jl,jk,jspec-jpband) = z_sum_aea + z_sum_aes
 
-            ! sw aerosol single scattering albedo
-            aer_piz_sw_vr(jl,jk,jspec-jpband) = z_sum_aes / ( z_sum_aea + z_sum_aes )
+          ! sw aerosol single scattering albedo
+          aer_piz_sw_vr(jl,jk,jspec-jpband) = z_sum_aes / ( z_sum_aea + z_sum_aes )
 
-            ! sw aerosol asymmetry factor
-            aer_cg_sw_vr(jl,jk,jspec-jpband) =                                  &
-              & (   zaeq1(jl,jkb) * zaes_rrtm(jspec,1) * zaeg_rrtm(jspec,1)   &
-              &   + zaeq2(jl,jkb) * zaes_rrtm(jspec,2) * zaeg_rrtm(jspec,2)   &
-              &   + zaeq3(jl,jkb) * zaes_rrtm(jspec,3) * zaeg_rrtm(jspec,3)   &
-              &   + zaeq4(jl,jkb) * zaes_rrtm(jspec,4) * zaeg_rrtm(jspec,4)   &
-              &   + zaeq5(jl,jkb) * zaes_rrtm(jspec,5) * zaeg_rrtm(jspec,5) ) / z_sum_aes
-          ENDDO
+          ! sw aerosol asymmetry factor
+          aer_cg_sw_vr(jl,jk,jspec-jpband) =                                  &
+            & (   zaeq1(jl,jkb) * zaes_rrtm(jspec,1) * zaeg_rrtm(jspec,1)   &
+            &   + zaeq2(jl,jkb) * zaes_rrtm(jspec,2) * zaeg_rrtm(jspec,2)   &
+            &   + zaeq3(jl,jkb) * zaes_rrtm(jspec,3) * zaeg_rrtm(jspec,3)   &
+            &   + zaeq4(jl,jkb) * zaes_rrtm(jspec,4) * zaeg_rrtm(jspec,4)   &
+            &   + zaeq5(jl,jkb) * zaes_rrtm(jspec,5) * zaeg_rrtm(jspec,5) ) / z_sum_aes
         ENDDO
       ENDDO
-    CASE (9)
-      CALL art_rad_aero_interface(zaeq1,zaeq2,zaeq3,zaeq4,zaeq5, &
-        &                         zaea_rrtm,zaes_rrtm,zaeg_rrtm, &
-        &                         jg,jb,1,klev,1,jce,jpband,jpsw,&
-        &                         aer_tau_lw_vr,                 &
-        &                         aer_tau_sw_vr,                 &
-        &                         aer_piz_sw_vr,                 &
-        &                         aer_cg_sw_vr)
-    CASE (13)
-      CALL set_bc_aeropt_kinne( current_date                        ,&
-        & jce              ,kbdim                 ,klev             ,&
-        & jb               ,jpsw                  ,jpband           ,&
-        & p_nh_state(jg)% metrics% z_mc(:,:,jb)                     ,&
-        & p_nh_state(jg)% metrics% ddqz_z_full(:,:,jb)              ,&
-        & aer_tau_sw_vr    ,aer_piz_sw_vr         , aer_cg_sw_vr    ,&
-        & aer_tau_lw_vr                                              )
-    CASE (14)
-      ! set zero aerosol before adding Stenchikov aerosols
-      aer_tau_lw_vr(:,:,:) = 0.0_wp
-      aer_tau_sw_vr(:,:,:) = 0.0_wp
-      aer_piz_sw_vr(:,:,:) = 1.0_wp
-      aer_cg_sw_vr(:,:,:)  = 0.0_wp
-      CALL add_bc_aeropt_stenchikov( current_date ,jg               ,&
-        & jce              ,kbdim                 ,klev             ,&
-        & jb               ,jpsw                  ,jpband           ,&
-        & p_nh_state(jg)% metrics% ddqz_z_full(:,:,jb)              ,&
-        & pp_fl                                                     ,&
-        & aer_tau_sw_vr    ,aer_piz_sw_vr         ,aer_cg_sw_vr     ,&
-        & aer_tau_lw_vr                                              )
-    CASE (15)
-      CALL set_bc_aeropt_kinne( current_date                        ,&
-        & jce              ,kbdim                 ,klev             ,&
-        & jb               ,jpsw                  ,jpband           ,&
-        & p_nh_state(jg)% metrics% z_mc(:,:,jb)                     ,&
-        & p_nh_state(jg)% metrics% ddqz_z_full(:,:,jb)              ,&
-        & aer_tau_sw_vr    ,aer_piz_sw_vr         ,aer_cg_sw_vr     ,&
-        & aer_tau_lw_vr                                              )
-      CALL add_bc_aeropt_stenchikov( current_date ,jg               ,&      
-        & jce              ,kbdim                 ,klev             ,&
-        & jb               ,jpsw                  ,jpband           ,&
-        & p_nh_state(jg)% metrics% ddqz_z_full(:,:,jb)              ,&
-        & pp_fl                                                     ,&
-        & aer_tau_sw_vr    ,aer_piz_sw_vr         ,aer_cg_sw_vr     ,&
-        & aer_tau_lw_vr                                              )
-    CASE DEFAULT
-      WRITE (c_irad_aero,'(i3)') irad_aero
-      CALL finish ('rrtm_interface of mo_radition','irad_aero= '// &
-                   TRIM(ADJUSTL(c_irad_aero))//' does not exist')
-    END SELECT
+    ENDDO
+    
     IF (lrad_aero_diag) THEN
       CALL rad_aero_diag (                                  &
       & jg              ,jb              ,jce             , &
