@@ -29,10 +29,10 @@
       &  emis_rad,                 & !< longwave surface emissivity
       &  pp_fl(klev),              & !< full level pressure in Pa
       &  pp_hl(klev+1),            & !< half level pressure in Pa
-      &  pp_sfc(kbdim),            & !< surface pressure in Pa
+      &  pp_sfc,            & !< surface pressure in Pa
       &  tk_fl(klev),              & !< full level temperature in K
       &  tk_hl(klev+1),            & !< half level temperature in K
-      &  tk_sfc(kbdim),            & !< surface temperature in K
+      &  tk_sfc,            & !< surface temperature in K
       &  xm_vap(klev),             & !< specific humidity in g/g
       &  xm_liq(klev),             & !< specific liquid water content
       &  xm_ice(klev),             & !< specific ice content in g/g
@@ -50,27 +50,35 @@
       &  flx_sw_net(klev+1),        & !< net downward SW flux profile,
       &  flx_lw_net_clr(klev+1),    & !< clrsky downward LW flux profile,
       &  flx_sw_net_clr(klev+1),    & !< clrsky downward SW flux profile,
-      &  flx_uplw_sfc(kbdim),             & !< sfc LW upward flux,
-      &  flx_upsw_sfc(kbdim),             & !< sfc SW upward flux,
-      &  flx_uplw_sfc_clr(kbdim),         & !< clrsky sfc LW upward flux,
-      &  flx_upsw_sfc_clr(kbdim)            !< clrsky sfc SW upward flux,
+      &  flx_uplw_sfc,             & !< sfc LW upward flux,
+      &  flx_upsw_sfc,             & !< sfc SW upward flux,
+      &  flx_uplw_sfc_clr,         & !< clrsky sfc LW upward flux,
+      &  flx_upsw_sfc_clr            !< clrsky sfc SW upward flux,
 
     REAL(wp), INTENT(out), OPTIONAL ::    &
-      &  flx_dnsw_diff_sfc(kbdim),        & !< sfc SW diffuse downward flux,
-      &  flx_upsw_toa(kbdim),             & !< TOA SW upward flux,
-      &  flx_dnpar_sfc(kbdim),            & !< PAR downward sfc flux
-      &  vis_frc_sfc(kbdim),              & !< Visible fraction of net surface SW radiation
-      &  nir_dff_frc_sfc(kbdim),          & !< Diffuse fraction of downward surface near-infrared radiation at surface
-      &  vis_dff_frc_sfc(kbdim),          & !< Diffuse fraction of downward surface visible radiation at surface
-      &  par_dff_frc_sfc(kbdim)             !< Diffuse fraction of downward surface PAR
+      &  flx_dnsw_diff_sfc,        & !< sfc SW diffuse downward flux,
+      &  flx_upsw_toa,             & !< TOA SW upward flux,
+      &  flx_dnpar_sfc,            & !< PAR downward sfc flux
+      &  vis_frc_sfc,              & !< Visible fraction of net surface SW radiation
+      &  nir_dff_frc_sfc,          & !< Diffuse fraction of downward surface near-infrared radiation at surface
+      &  vis_dff_frc_sfc,          & !< Diffuse fraction of downward surface visible radiation at surface
+      &  par_dff_frc_sfc             !< Diffuse fraction of downward surface PAR
 
+    ! >> sylvia_20200302
+    ! Set the number of shortwave and longwave spectral bands for RRTM.
+    ! SW value can be verified within mo_srtm_config module as jpsw variable.
+    ! LW value can be verified within mo_lrtm_par module as nbndlw variable.
+    INTEGER, PARAMETER   :: jpsw   = 14
+    INTEGER, PARAMETER   :: jpband = 16
+    ! << sylvia_20200302
+    
     INTEGER  :: jk, jl, jp, jkb, jspec,   & !< loop indicies
       &  icldlyr(klev)                !< index for clear or cloudy
 
     REAL(wp) ::                           &
       &  zsemiss(jpband),           & !< LW surface emissivity by band
       &  ppd_hl(klev),              & !< pressure thickness in Pa
-      &  pm_sfc(kbdim),                   & !< surface pressure in hPa
+      &  pm_sfc,                   & !< surface pressure in hPa
       &  amm,                             & !< molecular weight of moist air
       &  delta,                           & !< pressure thickness
       &  zscratch                           !< scratch array
@@ -119,11 +127,12 @@
          re_drop   (klev),       & !< effective radius of liquid
          re_cryst  (klev),       & !< effective radius of ice
          aux_out   (9),          &
-         zmu0      (kbdim),            &
-         zdayfrc   (kbdim)
+         zmu0      ,            &
+         zdayfrc
 
     INTEGER, PARAMETER    :: rng_seed_size = 4
     INTEGER :: rnseeds(rng_seed_size)
+    
     ! >> sylvia_20200302
     ! Fix volume mixing ratios of trace gases according to namelist values.
     ! Below am* variables are taken from shared/mo_physical_constants.f90
@@ -142,6 +151,23 @@
     REAL, PARAMETER       :: vmr_o2    = 0.20946_wp       !! [ppmv] O2
     REAL, PARAMETER       :: vmr_cfc11 = 240.e-12_wp      !! [ppmv] CFC11
     REAL, PARAMETER       :: vmr_cfc12 = 532.3e-12_wp     !! [ppmv] CFC12
+    ! << sylvia_20200302
+    
+    ! >> sylvia_20200302
+    ! Add in the variables necessary for the imported newcld_optics subroutine.
+    INTEGER  :: iband, jk, jl, ml1, ml2, mi1, mi2
+    REAL(wp) :: ztol, ztoi, zol, zoi, zgl, zgi, wl1, wl2, wi1, wi2, zfact
+    REAL(wp) :: zmsald, zmsaid
+    REAL(wp) :: &
+    &  zkap,        & !< breath parameter for scaling effective radius
+    &  zlwpt,       & !< liquid water path
+    &  zinhoml,     & !< cloud inhomogeneity factor (liquid)
+    &  re_droplets,        & !< effective radius of liquid distribution
+    &  re_crystals,        & !< effective radius of ice distribution
+    &  zscratch,           & !< effective radius of ice distribution
+    &  ztau(klev,n_mdl_bnds), & !< SW optical depth
+    &  zomg(klev,n_mdl_bnds), & !< cloud single scattering albedo
+    &  zasy(klev,n_mdl_bnds)    !< cloud asymmetry factor
     ! << sylvia_20200302
     
     ! Initialize output variables
@@ -241,6 +267,7 @@
       wx_vr(2,jk) = col_dry_vr(jk)*xm_cfc11(jkb)*1.e-20_wp
       wx_vr(3,jk) = col_dry_vr(jk)*xm_cfc12(jkb)*1.e-20_wp
   END DO
+  
   DO jp = 1, 7
     wkl_vr(jp,:)=col_dry_vr(:)*wkl_vr(jp,:)
   END DO
@@ -298,11 +325,102 @@
     ENDDO
   ENDDO
 
-  CALL newcld_optics(                                                     &
-  & klev         ,jpband       ,jpsw                                     ,&
-  & zland        ,icldlyr      ,tk_fl_vr                                 ,&
-  & zlwp_vr      ,ziwp_vr      ,zlwc_vr      ,ziwc_vr      ,cdnc_vr      ,&
-  & cld_tau_lw_vr,cld_tau_sw_vr,cld_piz_sw_vr,cld_cg_sw_vr                )
+  ! >> sylvia_20200302
+  ! Replacing the call to newcld_optics.f90 with the code therein.
+    ! First check for consistency of number of LW and SW bands
+  IF (nbnds_lw /= jpband .OR. nbnds_sw /= jpsw) THEN
+    CALL finish('mo_newcld_optics: Inconsistent number of spectral bands')
+  END IF
+
+  IF (relmin < 1.5_wp .OR. relmin > 2.5_wp ) THEN
+    CALL finish('Apparently unsuccessful loading of optical tables')
+  END IF
+  !
+  ! 1.0 Basic cloud properties
+  ! --------------------------------
+  zinhoml = 0.77_wp
+  zkap    = zkap_cont*(zland) + zkap_mrtm*(1.0_wp-zland)
+  !
+  ! 2.0 Cloud Optical Properties by interpolating tables in effective radius
+  ! --------------------------------
+
+  zfact = 1.0e6_wp*(3.0e-9_wp/(4.0_wp*pi*rhoh2o))**(1.0_wp/3.0_wp)
+  DO jk=1,klev
+      IF (icldlyr(jk)==1 .AND. (zlwp_vr(jk)+ziwp_vr(jk))>ccwmin) THEN
+
+        ! see ECHAM5 documentation (Roeckner et al, MPI report 349)
+        re_crystals = MAX(reimin ,MIN(reimax  ,83.8_wp*ziwc_vr(jk)**0.216_wp))
+        re_droplets = MAX(relmin,MIN(relmax,zfact*zkap(jl)*(zlwc_vr(jk) &
+          & /cdnc_vr(jk))**(1.0_wp/3.0_wp)))
+
+        ! alternative formulation Ou and Liou (1995) as function of T as in IFS (cy38r2)
+        ! re_crystals = MAX(20.0_wp, MIN(70.0_wp, 0.5_wp * &  ! limits to range of data
+        !   & ( 326.3_wp                                   &
+        !   & + 12.42_wp  * (tk_fl_vr(jk)-tmelt)              &
+        !   & + 0.197_wp  * (tk_fl_vr(jk)-tmelt)**2           &
+        !   & + 0.0012_wp * (tk_fl_vr(jk)-tmelt)**3 )))
+
+        ! optional tuning of effective crystal radius
+        ! re_crystals = re_crystals * 1.25_wp
+
+        ml1 = MAX(1,MIN(n_sizes-1,FLOOR(1.0_wp+(re_droplets-relmin)/del_rel)))
+        ml2 = ml1 + 1
+        wl1 = 1.0_wp - (re_droplets - (relmin + del_rel* REAL(ml1-1,wp)) )/del_rel
+        wl2 = 1.0_wp - wl1
+
+        mi1 = MAX(1,MIN(n_sizes-1,FLOOR(1.0_wp+(re_crystals-reimin)/del_rei)))
+        mi2 = mi1 + 1
+        wi1 = 1.0_wp - (re_crystals - (reimin + del_rei * REAL(mi1-1,wp)) )/del_rei
+        wi2 = 1.0_wp - wi1
+
+        ! Note: The following implementation is in principle intended; the first SW
+        !       band overlaps with the last LW band, and the last SW band is unused
+        !  ***  An open question is, however, is the usage of the coefficients
+        !       in the overlapping band: currently, ztau and zomg are set for LW,
+        !       whereas zasy are set for SW. ***
+!cdir expand=nbnds_sw
+        DO iband = nbnds_lw,n_mdl_bnds-1
+          ztol = zlwp_vr(jk)*(wl1*z_ext_l(ml1,iband) + wl2*z_ext_l(ml2,iband))
+          ztoi = ziwp_vr(jk)*(wi1*z_ext_i(mi1,iband) + wi2*z_ext_i(mi2,iband))
+          zol  = 1.0_wp - (wl1*z_coa_l(ml1,iband) + wl2*z_coa_l(ml2,iband))
+          zoi  = 1.0_wp - (wi1*z_coa_i(mi1,iband) + wi2*z_coa_i(mi2,iband))
+          zgl  = wl1*z_asy_l(ml1,iband) + wl2*z_asy_l(ml2,iband)
+          zgi  = wi1*z_asy_i(mi1,iband) + wi2*z_asy_i(mi2,iband)
+
+          zscratch = (ztol*zol+ztoi*zoi)
+          ztau(jl,jk,iband) = ztol*zinhoml(jl) + ztoi*zinhomi
+          zomg(jl,jk,iband) = zscratch/(ztol+ztoi)
+          zasy(jl,jk,iband) = (ztol*zol*zgl+ztoi*zoi*zgi)/zscratch
+        END DO
+        !
+        ! set old Cloud Optics instead of Kinne Optics for LW
+        !
+!cdir expand=nbnds_lw
+        DO iband = 1,nbnds_lw
+          zmsald=0.025520637_wp+0.2854650784_wp*EXP(-0.088968393014_wp  &
+               *re_droplets)
+          zmsaid=(rebcuh(iband)+rebcug(iband)/re_crystals)
+          ztau(jl,jk,iband)  = zmsald*zlwp_vr(jk)*zinhoml(jl)          &
+               &             + zmsaid*ziwp_vr(jk)*zinhomi
+          zomg(jl,jk,iband) = 0.0_wp
+        END DO
+
+        ELSE
+!cdir begin expand=n_mdl_bnds-1
+        ztau(jl,jk,1:n_mdl_bnds-1)  = 0.0_wp
+        zomg(jl,jk,1:n_mdl_bnds-1)  = 1.0_wp
+        zasy(jl,jk,1:n_mdl_bnds-1)  = 0.0_wp
+!cdir end
+      END IF
+!cdir expand=nbnds_lw
+      cld_tau_lw_vr(jl,jk,1:nbnds_lw) = ztau(jl,jk,1:nbnds_lw) * (1.0_wp - zomg(jl,jk,1:nbnds_lw))
+!cdir begin expand=nbnds_sw
+      cld_tau_sw_vr(jl,1:nbnds_sw,jk) = ztau(jl,jk,nbnds_lw:nbnds_lw+nbnds_sw-1)
+      cld_piz_sw_vr(jl,1:nbnds_sw,jk) = zomg(jl,jk,nbnds_lw:nbnds_lw+nbnds_sw-1)
+      cld_cg_sw_vr(jl,1:nbnds_sw,jk)  = zasy(jl,jk,nbnds_lw:nbnds_lw+nbnds_sw-1)
+!cdir end
+  END DO
+  ! << sylvia_20200302
 
   !
   ! 4.0 Radiative Transfer Routines
