@@ -1,8 +1,6 @@
   SUBROUTINE rrtm_interface(                                              &
     ! input                                                     ,&
-    & jg              ,jb              ,klev                             ,&
-    & ktype           ,zland           ,zglac                            ,&
-    & pmu0                                                               ,&
+    & klev            ,zland           ,pmu0                             ,&
     & alb_vis_dir     ,alb_nir_dir     ,alb_vis_dif     ,alb_nir_dif     ,&
     & emis_rad                                                           ,&
     & pp_fl           ,pp_hl           ,pp_sfc          ,tk_fl           ,&
@@ -10,9 +8,7 @@
     & xm_liq          ,xm_ice                                            ,&
     & cdnc                                                               ,&
     & cld_frc                                                            ,&
-    & xm_o3           ,xm_co2          ,xm_ch4                           ,&
-    & xm_n2o          ,xm_cfc11        ,xm_cfc12        ,xm_o2           ,&
-    & zaeq1, zaeq2, zaeq3, zaeq4, zaeq5                                  ,&
+    & xm_o3                       ,zaeq1, zaeq2, zaeq3, zaeq4, zaeq5     ,&
     ! output
     & flx_lw_net      ,flx_sw_net      ,flx_lw_net_clr  ,flx_sw_net_clr  ,&
     & flx_uplw_sfc    ,flx_upsw_sfc    ,flx_uplw_sfc_clr,flx_upsw_sfc_clr,&
@@ -21,46 +17,33 @@
     & vis_frc_sfc     ,nir_dff_frc_sfc ,vis_dff_frc_sfc ,par_dff_frc_sfc  )
     
     INTEGER,INTENT(in)  ::                &
-      &  jg,                              & !< domain index
-      &  jb,                              & !< block index
       &  klev                               !< number of levels
-
-    INTEGER,INTENT(in)  ::                &
-      &  ktype                       !< type of convection
 
     REAL(wp),INTENT(in) ::                &
       &  zland,                    & !< land-sea mask. (1. = land, 0. = sea/lakes)
-      &  zglac,                    & !< fraction of land covered by glaciers
       &  pmu0,                     & !< mu0 for solar zenith angle
       &  alb_vis_dir,              & !< surface albedo for vis range and dir light
       &  alb_nir_dir,              & !< surface albedo for NIR range and dir light
       &  alb_vis_dif,              & !< surface albedo for vis range and dif light
       &  alb_nir_dif,              & !< surface albedo for NIR range and dif light
       &  emis_rad,                 & !< longwave surface emissivity
-      &  pp_fl(klev),               & !< full level pressure in Pa
-      &  pp_hl(klev+1),             & !< half level pressure in Pa
-      &  pp_sfc(kbdim),                   & !< surface pressure in Pa
-      &  tk_fl(klev),               & !< full level temperature in K
-      &  tk_hl(klev+1),             & !< half level temperature in K
-      &  tk_sfc(kbdim),                   & !< surface temperature in K
-      &  xm_vap(klev),              & !< specific humidity in g/g
-      &  xm_liq(klev),              & !< specific liquid water content
-      &  xm_ice(klev),              & !< specific ice content in g/g
-      &  cdnc(klev),                & !< cloud nuclei concentration
-      &  cld_frc(klev),             & !< fractional cloud cover
-      &  xm_o3(klev),               & !< o3 mass mixing ratio
-      &  xm_co2(klev),              & !< co2 mass mixing ratio
-      &  xm_ch4(klev),              & !< ch4 mass mixing ratio
-      &  xm_n2o(klev),              & !< n2o mass mixing ratio
-      &  xm_cfc11(klev),            & !< cfc 11 volume mixing ratio
-      &  xm_cfc12(klev),            & !< cfc 12 volume mixing ratio
-      &  xm_o2(klev),               & !< o2  mass mixing ratio
-      &  zaeq1(klev),               & !< aerosol continental
-      &  zaeq2(klev),               & !< aerosol maritime
-      &  zaeq3(klev),               & !< aerosol urban
-      &  zaeq4(klev),               & !< aerosol volcano ashes
-      &  zaeq5(klev)                  !< aerosol stratospheric background
-
+      &  pp_fl(klev),              & !< full level pressure in Pa
+      &  pp_hl(klev+1),            & !< half level pressure in Pa
+      &  pp_sfc(kbdim),            & !< surface pressure in Pa
+      &  tk_fl(klev),              & !< full level temperature in K
+      &  tk_hl(klev+1),            & !< half level temperature in K
+      &  tk_sfc(kbdim),            & !< surface temperature in K
+      &  xm_vap(klev),             & !< specific humidity in g/g
+      &  xm_liq(klev),             & !< specific liquid water content
+      &  xm_ice(klev),             & !< specific ice content in g/g
+      &  cdnc(klev),               & !< cloud nuclei concentration
+      &  cld_frc(klev),            & !< fractional cloud cover
+      &  xm_o3(klev),              & !< o3 mass mixing ratio
+      &  zaeq1(klev),              & !< aerosol continental
+      &  zaeq2(klev),              & !< aerosol maritime
+      &  zaeq3(klev),              & !< aerosol urban
+      &  zaeq4(klev),              & !< aerosol volcano ashes
+      &  zaeq5(klev)                 !< aerosol stratospheric background
 
     REAL(wp), INTENT(out) ::              &
       &  flx_lw_net(klev+1),        & !< net downward LW flux profile,
@@ -141,7 +124,26 @@
 
     INTEGER, PARAMETER    :: rng_seed_size = 4
     INTEGER :: rnseeds(rng_seed_size)
-
+    ! >> sylvia_20200302
+    ! Fix volume mixing ratios of trace gases according to namelist values.
+    ! Below am* variables are taken from shared/mo_physical_constants.f90
+    REAL(wp), PARAMETER   :: amd       = 28.970_wp        !> [g/mol] dry air
+    REAL(wp), PARAMETER   :: amco2     = 44.011_wp        !>[g/mol] CO2
+    REAL(wp), PARAMETER   :: amch4     = 16.043_wp        !! [g/mol] CH4
+    REAL(wp), PARAMETER   :: amo3      = 47.9982_wp       !! [g/mol] O3
+    REAL(wp), PARAMETER   :: amo2      = 31.9988_wp       !! [g/mol] O2
+    REAL(wp), PARAMETER   :: amn2o     = 44.013_wp        !! [g/mol] N2O
+    REAL(wp), PARAMETER   :: amc11     = 137.3686_wp      !! [g/mol] CFC11
+    REAL(wp), PARAMETER   :: amc12     = 120.9140_wp      !! [g/mol] CFC12
+    REAL(wp), PARAMETER   :: amw       = 18.0154_wp       !! [g/mol] H2O
+    REAL, PARAMETER       :: vmr_co2   = 390.e-6_wp       !! [ppmv] CO2
+    REAL, PARAMETER       :: vmr_ch4   = 1800.e-9_wp      !! [ppmv] CH4
+    REAL, PARAMETER       :: vmr_n2o   = 322.0e-9_wp      !! [ppmv] N20
+    REAL, PARAMETER       :: vmr_o2    = 0.20946_wp       !! [ppmv] O2
+    REAL, PARAMETER       :: vmr_cfc11 = 240.e-12_wp      !! [ppmv] CFC11
+    REAL, PARAMETER       :: vmr_cfc12 = 532.3e-12_wp     !! [ppmv] CFC12
+    ! << sylvia_20200302
+    
     ! Initialize output variables
     flx_lw_net(:,:)     = 0._wp
     flx_lw_net_clr(:,:) = 0._wp
@@ -159,6 +161,16 @@
     IF (PRESENT(vis_dff_frc_sfc))   vis_dff_frc_sfc(:)   = 0._wp
     IF (PRESENT(par_dff_frc_sfc))   par_dff_frc_sfc(:)   = 0._wp
 
+    ! >> sylvia_20200302
+    ! Calculate the mass mixing ratios from volume mixing ratios.
+    xm_co2(klev)      = vmr_o2*amco2/amd         !< [g/g] co2 mass mixing ratio
+    xm_ch4(klev)      = vmr_ch4*amch4/amd        !< [g/g] ch4 mass mixing ratio
+    xm_n2o(klev)      = vmr_n2o*amn2o/amd        !< [g/g] n2o mass mixing ratio
+    xm_cfc11(klev)    = vmr_cfc11*amc11/amd      !< [g/g] cfc11 mass mixing ratio
+    xm_cfc12(klev)    = vmr_cfc12*amc12/amd      !< [g/g] cfc 12 mass mixing ratio
+    xm_o2(klev)       = vmr_o2*amo2/amd          !< [g/g] o2  mass mixing ratio
+    ! << sylvia_20200302
+    
     !
     ! 1.0 Constituent properties
     !--------------------------------
@@ -286,9 +298,9 @@
     ENDDO
   ENDDO
 
-  CALL newcld_optics(                                                       &
+  CALL newcld_optics(                                                     &
   & klev         ,jpband       ,jpsw                                     ,&
-  & zglac        ,zland        ,ktype        ,icldlyr      ,tk_fl_vr     ,&
+  & zland        ,icldlyr      ,tk_fl_vr                                 ,&
   & zlwp_vr      ,ziwp_vr      ,zlwc_vr      ,ziwc_vr      ,cdnc_vr      ,&
   & cld_tau_lw_vr,cld_tau_sw_vr,cld_piz_sw_vr,cld_cg_sw_vr                )
 
