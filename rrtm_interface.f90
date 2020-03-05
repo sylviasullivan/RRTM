@@ -1,12 +1,15 @@
   SUBROUTINE rrtm_interface(                                              &
     ! input
+    ! >> sylvia_20200305
+    ! Adding the "timestamp" and latitude associated with the profile as inputs.
+    & day             ,hour            ,minute          ,latt            ,&
     & klev            ,zland           ,pmu0            ,alb_vis_dir     ,&
     & alb_nir_dir     ,alb_vis_dif     ,alb_nir_dif     ,emis_rad        ,&
     & pp_fl           ,pp_hl           ,pp_sfc                           ,&
     & tk_fl           ,tk_hl           ,tk_sfc                           ,&
     & xm_vap          ,xm_liq          ,xm_ice                           ,&
-    & cdnc            ,cld_frc         ,xm_o3           ,aotss           ,&
-    & aotorg          ,aotbc           ,aotso4          ,aotdu           ,&
+    & cdnc            ,cld_frc         ,aotss           ,aotorg          ,&
+    & aotbc           ,aotso4          ,aotdu                            ,&
     ! >> sylvia_20200305
     ! Changing inputs zaeq1,zaeq2,zaeq3,zaeq4,zaeq5 to aot* variables.
     ! output
@@ -16,9 +19,13 @@
     & flx_upsw_toa                                                        )
     
     INTEGER,INTENT(in)  ::         &
-      &  klev                               !< number of levels
+      &  klev,                     & !< number of levels
+      &  day,                      & !< day associated with this profile, sylvia_20200305
+      &  hour,                     & !< hour associated with this profile
+      &  minute                      !< minute associated with this profile
 
     REAL(wp),INTENT(in) ::         &
+      &  latt,                     & !< latitude associated with this profile, sylvia_20200305
       &  zland,                    & !< land-sea mask. (1. = land, 0. = sea/lakes)
       &  pmu0,                     & !< mu0 for solar zenith angle
       &  alb_vis_dir,              & !< surface albedo for vis range and dir light
@@ -37,7 +44,6 @@
       &  xm_ice(klev),             & !< specific ice content in g/g
       &  cdnc(klev),               & !< cloud nuclei concentration
       &  cld_frc(klev),            & !< fractional cloud cover
-      &  xm_o3(klev),              & !< o3 mass mixing ratio
       ! >> sylvia_20200305
       ! Aerosol inputs from external data.
       &  aotss(12),                & !< monthly climatology, sea salt AOT
@@ -129,6 +135,7 @@
       &  zaeq3(klev),                 & !< aerosol urban
       &  zaeq4(klev),                 & !< aerosol volcano ashes
       &  zaeq5(klev),                 & !< aerosol stratospheric background
+      &  xm_o3(klev),                 & !< o3 mass mixing ratio
       &  aerosol(5)                     !< 5 classes of aerosol
       ! << sylvia_20200305
 
@@ -259,6 +266,11 @@
     xm_cfc12(klev)    = vmr_cfc12*amc12/amd      !< [g/g] cfc 12 mass mixing ratio
     xm_o2(klev)       = vmr_o2*amo2/amd          !< [g/g] o2  mass mixing ratio
     ! << sylvia_20200302
+    
+    ! >> sylvia_20200305
+    ! Calculate the mass mixing ratio of ozone. imo2 is the month associated with the profile.
+    CALL calc_o3_gems(imo2, day, hour, minute, latt, pp_hl, xm_o3)
+    ! << sylvia_20200305
     
     
     ! 1.0 Constituent properties
