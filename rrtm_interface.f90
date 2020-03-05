@@ -1,25 +1,24 @@
   SUBROUTINE rrtm_interface(                                              &
-    ! input                                                     ,&
-    & klev            ,zland           ,pmu0                             ,&
-    & alb_vis_dir     ,alb_nir_dir     ,alb_vis_dif     ,alb_nir_dif     ,&
-    & emis_rad                                                           ,&
-    & pp_fl           ,pp_hl           ,pp_sfc          ,tk_fl           ,&
-    & tk_hl           ,tk_sfc          ,xm_vap                           ,&
-    & xm_liq          ,xm_ice                                            ,&
-    & cdnc                                                               ,&
-    & cld_frc                                                            ,&
-    & xm_o3                       ,zaeq1, zaeq2, zaeq3, zaeq4, zaeq5     ,&
+    ! input
+    & klev            ,zland           ,pmu0            ,alb_vis_dir     ,&
+    & alb_nir_dir     ,alb_vis_dif     ,alb_nir_dif     ,emis_rad        ,&
+    & pp_fl           ,pp_hl           ,pp_sfc                           ,&
+    & tk_fl           ,tk_hl           ,tk_sfc                           ,&
+    & xm_vap          ,xm_liq          ,xm_ice                           ,&
+    & cdnc            ,cld_frc         ,xm_o3           ,aotss           ,&
+    & aotorg          ,aotbc           ,aotso4          ,aotdu           ,&
+    ! >> sylvia_20200305
+    ! Changing inputs zaeq1,zaeq2,zaeq3,zaeq4,zaeq5 to aot* variables.
     ! output
     & flx_lw_net      ,flx_sw_net      ,flx_lw_net_clr  ,flx_sw_net_clr  ,&
     & flx_uplw_sfc    ,flx_upsw_sfc    ,flx_uplw_sfc_clr,flx_upsw_sfc_clr,&
     ! optional output
-    & flx_dnsw_diff_sfc, flx_upsw_toa  ,flx_dnpar_sfc                    ,&
-    & vis_frc_sfc     ,nir_dff_frc_sfc ,vis_dff_frc_sfc ,par_dff_frc_sfc  )
+    & flx_upsw_toa                                                        )
     
-    INTEGER,INTENT(in)  ::                &
+    INTEGER,INTENT(in)  ::         &
       &  klev                               !< number of levels
 
-    REAL(wp),INTENT(in) ::                &
+    REAL(wp),INTENT(in) ::         &
       &  zland,                    & !< land-sea mask. (1. = land, 0. = sea/lakes)
       &  pmu0,                     & !< mu0 for solar zenith angle
       &  alb_vis_dir,              & !< surface albedo for vis range and dir light
@@ -29,40 +28,37 @@
       &  emis_rad,                 & !< longwave surface emissivity
       &  pp_fl(klev),              & !< full level pressure in Pa
       &  pp_hl(klev+1),            & !< half level pressure in Pa
-      &  pp_sfc,            & !< surface pressure in Pa
+      &  pp_sfc,                   & !< surface pressure in Pa
       &  tk_fl(klev),              & !< full level temperature in K
       &  tk_hl(klev+1),            & !< half level temperature in K
-      &  tk_sfc,            & !< surface temperature in K
+      &  tk_sfc,                   & !< surface temperature in K
       &  xm_vap(klev),             & !< specific humidity in g/g
       &  xm_liq(klev),             & !< specific liquid water content
       &  xm_ice(klev),             & !< specific ice content in g/g
       &  cdnc(klev),               & !< cloud nuclei concentration
       &  cld_frc(klev),            & !< fractional cloud cover
       &  xm_o3(klev),              & !< o3 mass mixing ratio
-      &  zaeq1(klev),              & !< aerosol continental
-      &  zaeq2(klev),              & !< aerosol maritime
-      &  zaeq3(klev),              & !< aerosol urban
-      &  zaeq4(klev),              & !< aerosol volcano ashes
-      &  zaeq5(klev)                 !< aerosol stratospheric background
+      ! >> sylvia_20200305
+      ! Aerosol inputs from external data.
+      &  aotss(12),                & !< monthly climatology, sea salt AOT
+      &  aotorg(12),               & !< monthly climatology, organic AOT
+      &  aotbc(12),                & !< monthly climatology, black carbon AOT
+      &  aotso4(12),               & !< monthly climatology, sulfate AOT
+      &  aotdu(12)                   !< monthly climatology, dust AOT
+      ! << sylvia_20200305
 
-    REAL(wp), INTENT(out) ::              &
+    REAL(wp), INTENT(out) ::        &
       &  flx_lw_net(klev+1),        & !< net downward LW flux profile,
       &  flx_sw_net(klev+1),        & !< net downward SW flux profile,
       &  flx_lw_net_clr(klev+1),    & !< clrsky downward LW flux profile,
       &  flx_sw_net_clr(klev+1),    & !< clrsky downward SW flux profile,
-      &  flx_uplw_sfc,             & !< sfc LW upward flux,
-      &  flx_upsw_sfc,             & !< sfc SW upward flux,
-      &  flx_uplw_sfc_clr,         & !< clrsky sfc LW upward flux,
-      &  flx_upsw_sfc_clr            !< clrsky sfc SW upward flux,
+      &  flx_uplw_sfc,              & !< sfc LW upward flux,
+      &  flx_upsw_sfc,              & !< sfc SW upward flux,
+      &  flx_uplw_sfc_clr,          & !< clrsky sfc LW upward flux,
+      &  flx_upsw_sfc_clr             !< clrsky sfc SW upward flux,
 
     REAL(wp), INTENT(out), OPTIONAL ::    &
-      &  flx_dnsw_diff_sfc,        & !< sfc SW diffuse downward flux,
-      &  flx_upsw_toa,             & !< TOA SW upward flux,
-      &  flx_dnpar_sfc,            & !< PAR downward sfc flux
-      &  vis_frc_sfc,              & !< Visible fraction of net surface SW radiation
-      &  nir_dff_frc_sfc,          & !< Diffuse fraction of downward surface near-infrared radiation at surface
-      &  vis_dff_frc_sfc,          & !< Diffuse fraction of downward surface visible radiation at surface
-      &  par_dff_frc_sfc             !< Diffuse fraction of downward surface PAR
+      &  flx_upsw_toa                !< TOA SW upward flux,
 
     ! >> sylvia_20200302
     ! Set the number of shortwave and longwave spectral bands for RRTM.
@@ -72,19 +68,87 @@
     INTEGER, PARAMETER   :: jpband = 16
     ! << sylvia_20200302
     
+    ! >> sylvia_20200305
+    ! Pulling parameters from shared/mo_impl_constants.f90
+    ! identifiers for aerosol classes of Tegen climatology 
+    INTEGER, PARAMETER :: iss   =  1
+    INTEGER, PARAMETER :: iorg  =  2
+    INTEGER, PARAMETER :: ibc   =  3
+    INTEGER, PARAMETER :: iso4  =  4
+    INTEGER, PARAMETER :: idu   =  5
+    INTEGER, PARAMETER :: nclass_aero = 5
+    ! << sylvia_20200305
+    
+    ! >> sylvia_20200303
+    ! Pulling parameters from the mo_nwp_rrtm_interface module.
+    REAL(wp), PARAMETER::  &
+      & zaeops = 0.05_wp,   &
+      & zaeopl = 0.2_wp,    &
+      & zaeopu = 0.1_wp,    &
+      & zaeopd = 1.9_wp,    &
+      & ztrpt  = 30.0_wp,   &
+      & ztrbga = 0.03_wp  / (101325.0_wp - 19330.0_wp), &
+      & zvobga = 0.007_wp /  19330.0_wp , &
+      & zstbga = 0.045_wp /  19330.0_wp
+    ! << sylvia_20200303
+    
+    ! >> sylvia_20200303
+    ! Pulling parameters from the aerdis subroutine in the mo_radiation_rg_par module
+    REAL (wp), PARAMETER  ::  &
+      zhss = 8434.0_wp/1000.0_wp ,  & !
+      zhsl = 8434.0_wp/1000.0_wp ,  & !
+      zhsu = 8434.0_wp/1000.0_wp ,  & !
+      zhsd = 8434.0_wp/3000.0_wp      !
+    REAL(wp) :: log_eta 
+    ! << sylvia_20200303
+    
+    ! >> sylvia_20200305
+    ! Changing imo1 and imo2 to constants for this simulation (previous and current months)
+    ! zw is a constant weighting calculated from the seconds elapsed in the month.
+    ! See calculate_time_interpolation_weights subroutine in the mo_bcs_time_interpolation module.
+    INTEGER, PARAMETER :: imo1  =  7
+    INTEGER, PARAMETER :: imo2  =  8
+    REAL, PARAMETER    :: zw    =  0.758
+    !for Tegen aerosol time interpolation
+    ! << sylvia_20200305
+    
     INTEGER  :: jk, jl, jp, jkb, jspec,   & !< loop indicies
-      &  icldlyr(klev)                !< index for clear or cloudy
+      &  icldlyr(klev)                      !< index for clear or cloudy
 
-    REAL(wp) ::                           &
-      &  zsemiss(jpband),           & !< LW surface emissivity by band
-      &  ppd_hl(klev),              & !< pressure thickness in Pa
-      &  pm_sfc,                   & !< surface pressure in hPa
-      &  amm,                             & !< molecular weight of moist air
-      &  delta,                           & !< pressure thickness
-      &  zscratch                           !< scratch array
+    REAL(wp) ::                       &
+      &  zsemiss(jpband),             & !< LW surface emissivity by band
+      &  ppd_hl(klev),                & !< pressure thickness in Pa
+      &  pm_sfc,                      & !< surface pressure in hPa
+      &  amm,                         & !< molecular weight of moist air
+      &  delta,                       & !< pressure thickness
+      &  zscratch,                    & !< scratch array
+      ! >> sylvia_20200305, zaeq* parameters added back in here.
+      ! Aerosol array to hold what was prm_diag%aerosol.
+      &  zaeq1(klev),                 & !< aerosol continental
+      &  zaeq2(klev),                 & !< aerosol maritime
+      &  zaeq3(klev),                 & !< aerosol urban
+      &  zaeq4(klev),                 & !< aerosol volcano ashes
+      &  zaeq5(klev),                 & !< aerosol stratospheric background
+      &  aerosol(5)                     !< 5 classes of aerosol
+      ! << sylvia_20200305
 
     REAL(wp) :: z_sum_aea, z_sum_aes !help variables for aerosol
-
+    
+    ! >> sylvia_20200305
+    ! Pulling the intermediate variables for treatment of aerosol from nwp_ozon_aerosol.
+    REAL(wp)::                        &
+      & zsign(klev),                  &  ! looking at pvdaes in aerdis subroutine
+      & zvdaes(klev),                 &
+      & zvdael(klev),                 &
+      & zvdaeu(klev),                 &
+      & zvdaed(klev),                 &
+      & zaetr_top, zaetr_bot, zaetr,  &
+      & zaeqdo,    zaeqdn,            &
+      & zaequo,    zaequn,            &
+      & zaeqlo,    zaeqln,            &
+      & zaeqso,    zaeqsn,    zw    ! (nproma,pt_patch%nblks_c)
+    ! << sylvia_20200305
+    
     !
     ! --- vertically reversed _vr variables
     !
@@ -120,14 +184,13 @@
       &  flx_upsw_clr(klev+1),      & !< upward flux clear sky
       &  flx_dnsw(klev+1),          & !< downward flux total sky
       &  flx_dnsw_clr(klev+1)         !< downward flux clear sky
+    ! >> sylvia_20200303, Removing the tune_dust parameter here.
 
-    REAL(wp) :: tune_dust(jpband)  ! local variable for LW absorption tuning of dust
-
-    REAL(wp) ::                        &
+    REAL(wp) ::                  &
          re_drop   (klev),       & !< effective radius of liquid
          re_cryst  (klev),       & !< effective radius of ice
          aux_out   (9),          &
-         zmu0      ,            &
+         zmu0         ,          &
          zdayfrc
 
     INTEGER, PARAMETER    :: rng_seed_size = 4
@@ -197,15 +260,11 @@
     xm_o2(klev)       = vmr_o2*amo2/amd          !< [g/g] o2  mass mixing ratio
     ! << sylvia_20200302
     
-    !
+    
     ! 1.0 Constituent properties
     !--------------------------------
-
-    !
-    ! --- control for infintesimal cloud fractions
-    !
+    ! Control for infintesimal cloud fractions
     DO jk = 1, klev
-      !
       jkb = klev+1-jk
       cld_frc_vr(jk)  = cld_frc(jkb)
 
@@ -280,19 +339,164 @@
   ! --------------------------------
   ppd_hl(:) = pp_hl(2:klev+1)-pp_hl(1:klev)
 
-  tune_dust(1:jpband) = 1._wp
+  !
+  ! >> sylvia_20200305 START: nwp_ozon_aerosol
+  !
+  ! >> sylvia_20200305
+  ! Changing prm_diag%aerosol nomenclautre to just aerosol array with constant
+  ! indices and weightings.
+  aerosol(iss)  = aotss(imo1) + ( aotss(imo2) - aotss(imo1)  ) * zw
+  aerosol(iorg) = aotorg(imo1) + ( aotorg(imo2)  - aotorg(imo1)  ) * zw
+  aerosol(ibc)  = aotbc(imo1) + ( aotbc(imo2)  -  aotbc(imo1)   ) * zw
+  aerosol(iso4) = aotso4(imo1) +  ( aotso4(imo2)  - aotso4(imo1)  ) * zw
+  aerosol(idu)  = aotdu(imo1) + ( aotdu(imo2) - aotdu(imo1) ) * zw
+  ! << sylvia_20200305
+  
+  ! Below changed from pt_diag%pres_ifc(jk,jb) to pp_hl
+  DO jk = 2, klev
+     zsign(jk) = pp_hl(jk) / 101325._wp 
+  ENDDO
+  
+  ! The routine aerdis is called to receive some parameters for the vertical
+  ! distribution of background aerosol.
+  ! >> sylvia_20200304
+  ! Adding the aerdis subroutine code in here.
+  zvdaes(1) = 0.0_wp
+  zvdael(1) = 0.0_wp
+  zvdaeu(1) = 0.0_wp
+  zvdaed(1) = 0.0_wp
+    
+  DO jk = 2,klev
+     log_eta    = LOG(petah(jk))
+     zvdaes(jk) = EXP(zhss*log_eta) ! petah(jc,jk)**zhss
+     zvdael(jk) = zsign(jk)     ! petah(jc,jk)**zhsl; zhsl is the same as zhss
+     zvdaeu(jk) = zsign(jk)     ! petah(jc,jk)**zhsu; zhsu is the same as zhss
+     zvdaed(jk) = EXP(zhsd*log_eta) ! petah(jc,jk)**zhsd
+  ENDDO
+  ! << sylvia_20200304
+  
+  ! loop over layers
+  DO jk = 1,klev
+     zaeqsn       = aerosol(iss)                     * zvdaes(jk+1)
+     zaeqln       = (aerosol(iorg) + aerosol(iso4))  * zvdael(jk+1)
+     zaequn       = aerosol(ibc)                     * zvdaeu(jk+1)
+     zaeqdn       = aerosol(idu)                     * zvdaed(jk+1)
+     zaetr_bot    = zaetr_top &
+            & * ( MIN (1.0_wp, tk_hl(jk)/tk_hl(jk+1)) )**ztrpt
+
+     zaetr        = SQRT(zaetr_bot*zaetr_top)
+     zaeq1(jk)    = (1.0_wp - zaetr)*( ztrbga*pt_diag%dpres_mc(jk) &
+            &            + zaeqln - zaeqlo )
+     zaeq2(jk)    = (1.0_wp - zaetr) * (zaeqsn - zaeqso)
+     zaeq3(jk)    = (1.0_wp - zaetr) * (zaeqdn - zaeqdo)
+     zaeq4(jk)    = (1.0_wp - zaetr) * (zaequn - zaequo)
+     zaeq5(jk)    = zaetr  *  zstbga  *  pt_diag%dpres_mc(jk)
+
+     zaetr_top    = zaetr_bot
+     zaeqso       = zaeqsn
+     zaeqlo       = zaeqln
+     zaequo       = zaequn
+     zaeqdo       = zaeqdn
+  ENDDO
+  ! << sylvia_20200305 STOP: nwp_ozon_aerosol
+  !
+  ! >> sylvia_20200303
+  ! Adding in variables for zaea_rrtm (absorption), zaes_rrtm (scattering), and 
+  ! zaeg_rrtm (asymmetry factor). zaea_rrtm is the "ratio of optical thickness
+  ! for the absorption in spectral interval jpspec and total optical thickness
+  ! at 0.55 um for an aerosoltyp specified by the second array index. zaes_rrtm
+  ! is the "analog for the optical thickness of scattering." These values are 
+  ! pulled from mo_aerosol_util SUBROUTINE init_aerosol_props_tegen_rrtm.
+  
+  ! the following aerosol types (second array index) are considered:
+  ! 1. continental, 2. maritime, 3. desert, 4. urban, 5. stratospheric background (SB)
+
+   !absorption
+   zaea_rrtm=RESHAPE( (/ &
+     &0.0304_wp,0.0367_wp,0.0462_wp,0.0566_wp,0.0496_wp,0.0336_wp,0.0355_wp,0.0456_wp,&
+     &0.0272_wp,0.0264_wp,0.0290_wp,0.0156_wp,0.0165_wp,0.0157_wp,0.0138_wp,0.0401_wp,&
+     &0.0401_wp,0.0760_wp,0.0214_wp,0.0227_wp,0.0295_wp,0.0394_wp,0.0431_wp,0.0519_wp,&
+     &0.0611_wp,0.0774_wp,0.1012_wp,0.1412_wp,0.2632_wp,0.0324_wp,                    &
+     &0.1096_wp,0.1614_wp,0.2294_wp,0.2506_wp,0.2242_wp,0.1190_wp,0.0680_wp,0.0664_wp,&
+     &0.0656_wp,0.0749_wp,0.1250_wp,0.0425_wp,0.0498_wp,0.0425_wp,0.0259_wp,0.1619_wp,&
+     &0.1619_wp,0.2152_wp,0.0139_wp,0.0119_wp,0.0046_wp,0.0036_wp,0.0020_wp,0.0016_wp,&
+     &0.0012_wp,0.0013_wp,0.0016_wp,0.0035_wp,0.0147_wp,0.0882_wp,                    &
+     &0.0974_wp,0.1529_wp,0.1643_wp,0.1373_wp,0.1753_wp,0.1923_wp,0.2804_wp,0.2426_wp,&
+     &0.1263_wp,0.1321_wp,0.0979_wp,0.0664_wp,0.0360_wp,0.0311_wp,0.0325_wp,0.0833_wp,&
+     &0.0833_wp,0.1170_wp,0.0739_wp,0.0631_wp,0.0604_wp,0.0628_wp,0.0645_wp,0.0677_wp,&
+     &0.0843_wp,0.1328_wp,0.2224_wp,0.3022_wp,0.3579_wp,0.1820_wp,                    &
+     &0.0267_wp,0.0329_wp,0.0420_wp,0.0515_wp,0.0461_wp,0.0332_wp,0.0354_wp,0.0447_wp,&
+     &0.0303_wp,0.0306_wp,0.0342_wp,0.0248_wp,0.0274_wp,0.0276_wp,0.0271_wp,0.0526_wp,&
+     &0.0526_wp,0.0903_wp,0.0450_wp,0.0492_wp,0.0596_wp,0.0754_wp,0.0842_wp,0.1082_wp,&
+     &0.1429_wp,0.1926_wp,0.2595_wp,0.3379_wp,0.4761_wp,0.0340_wp,                    &
+     &0.0060_wp,0.0117_wp,0.0269_wp,0.0222_wp,0.0195_wp,0.0398_wp,0.0733_wp,0.1091_wp,&     ! SB
+     &0.1124_wp,0.0415_wp,0.0424_wp,0.0495_wp,0.0451_wp,0.0484_wp,0.0540_wp,0.0735_wp,&     ! SB
+     &0.0735_wp,0.0188_wp,0.0021_wp,0.0014_wp,0.0007_wp,0.0002_wp,0.0000_wp,0.0000_wp,&     ! SB
+     &0.0000_wp,0.0000_wp,0.0000_wp,0.0000_wp,0.0000_wp,0.0628_wp/),(/jpsw+jpband,5/))      ! SB
+     
+  !scattering
+   zaes_rrtm=RESHAPE( (/ &
+     &0.0060_wp,0.0107_wp,0.0134_wp,0.0150_wp,0.0152_wp,0.0200_wp,0.0232_wp,0.0211_wp,&
+     &0.0112_wp,0.0186_wp,0.0128_wp,0.0260_wp,0.0339_wp,0.0368_wp,0.0409_wp,0.0527_wp,&
+     &0.0527_wp,0.0621_wp,0.0715_wp,0.0929_wp,0.1276_wp,0.1895_wp,0.2350_wp,0.3930_wp,&
+     &0.6641_wp,0.9834_wp,1.3737_wp,1.7160_wp,1.9115_wp,0.0198_wp,                    &
+     &0.0188_wp,0.0421_wp,0.0576_wp,0.0547_wp,0.0430_wp,0.0367_wp,0.0806_wp,0.1209_wp,&
+     &0.1681_wp,0.2257_wp,0.2440_wp,0.3622_wp,0.4540_wp,0.5026_wp,0.5765_wp,0.5986_wp,&
+     &0.5986_wp,0.5225_wp,0.7420_wp,0.8311_wp,0.8970_wp,0.9444_wp,0.9637_wp,0.9763_wp,&
+     &0.9855_wp,1.0034_wp,1.0337_wp,1.0640_wp,1.0795_wp,0.1312_wp,                    &
+     &0.0458_wp,0.0823_wp,0.0667_wp,0.0642_wp,0.1080_wp,0.1471_wp,0.2422_wp,0.1216_wp,&
+     &0.0717_wp,0.1616_wp,0.2027_wp,0.3042_wp,0.4045_wp,0.4369_wp,0.4685_wp,0.5043_wp,&
+     &0.5043_wp,0.5782_wp,0.6898_wp,0.7477_wp,0.7926_wp,0.8320_wp,0.8503_wp,0.8736_wp,&
+     &0.8874_wp,0.8737_wp,0.8278_wp,0.7857_wp,0.7571_wp,0.1714_wp,                    &
+     &0.0048_wp,0.0085_wp,0.0107_wp,0.0119_wp,0.0121_wp,0.0160_wp,0.0185_wp,0.0170_wp,&
+     &0.0090_wp,0.0150_wp,0.0103_wp,0.0210_wp,0.0274_wp,0.0298_wp,0.0332_wp,0.0430_wp,&
+     &0.0430_wp,0.0485_wp,0.0593_wp,0.0776_wp,0.1073_wp,0.1610_wp,0.2008_wp,0.3398_wp,&
+     &0.5809_wp,0.8701_wp,1.2309_wp,1.5535_wp,1.7368_wp,0.0159_wp,                    &
+     &0.0000_wp,0.0000_wp,0.0000_wp,0.0000_wp,0.0001_wp,0.0003_wp,0.0006_wp,0.0008_wp,&     ! SB
+     &0.0005_wp,0.0003_wp,0.0008_wp,0.0013_wp,0.0024_wp,0.0030_wp,0.0040_wp,0.0059_wp,&     ! SB
+     &0.0059_wp,0.0123_wp,0.0236_wp,0.0384_wp,0.0651_wp,0.1246_wp,0.1801_wp,0.3807_wp,&     ! SB
+     &0.7105_wp,1.0514_wp,1.3754_wp,1.5334_wp,1.5495_wp,0.0009_wp/),(/jpsw+jpband,5/))      ! SB
+
+   !asymmetry factor
+   zaeg_rrtm=RESHAPE( (/ &
+     &0.4388_wp,0.5396_wp,0.6191_wp,0.6535_wp,0.6876_wp,0.6718_wp,0.6493_wp,0.6782_wp,&
+     &0.7958_wp,0.7537_wp,0.7757_wp,0.7821_wp,0.7583_wp,0.7487_wp,0.7351_wp,0.6917_wp,&
+     &0.6917_wp,0.6989_wp,0.6982_wp,0.6726_wp,0.6426_wp,0.6294_wp,0.6337_wp,0.6582_wp,&
+     &0.6850_wp,0.7061_wp,0.7212_wp,0.7306_wp,0.7417_wp,0.6978_wp,                    &
+     &0.4062_wp,0.4507_wp,0.4878_wp,0.5302_wp,0.5850_wp,0.6962_wp,0.7242_wp,0.7293_wp,&
+     &0.7414_wp,0.7484_wp,0.7607_wp,0.7785_wp,0.7805_wp,0.7785_wp,0.7724_wp,0.7690_wp,&
+     &0.7690_wp,0.8348_wp,0.8316_wp,0.8170_wp,0.8074_wp,0.7990_wp,0.7954_wp,0.7897_wp,&
+     &0.7884_wp,0.7927_wp,0.8001_wp,0.8057_wp,0.8076_wp,0.7462_wp,                    &
+     &0.4219_wp,0.3928_wp,0.5306_wp,0.6229_wp,0.5544_wp,0.5454_wp,0.4353_wp,0.5736_wp,&
+     &0.7502_wp,0.6957_wp,0.7038_wp,0.6881_wp,0.6740_wp,0.6739_wp,0.6784_wp,0.6969_wp,&
+     &0.6969_wp,0.7068_wp,0.6965_wp,0.6918_wp,0.6904_wp,0.6911_wp,0.6915_wp,0.6952_wp,&
+     &0.7080_wp,0.7326_wp,0.7689_wp,0.8000_wp,0.8206_wp,0.5788_wp,                    &
+     &0.4387_wp,0.5394_wp,0.6187_wp,0.6531_wp,0.6871_wp,0.6712_wp,0.6482_wp,0.6756_wp,&
+     &0.7930_wp,0.7498_wp,0.7685_wp,0.7766_wp,0.7520_wp,0.7419_wp,0.7277_wp,0.6828_wp,&
+     &0.6828_wp,0.6875_wp,0.6872_wp,0.6622_wp,0.6333_wp,0.6209_wp,0.6250_wp,0.6479_wp,&
+     &0.6725_wp,0.6912_wp,0.7043_wp,0.7129_wp,0.7254_wp,0.6956_wp,                    &
+     &0.0021_wp,0.0039_wp,0.0061_wp,0.0078_wp,0.0109_wp,0.0161_wp,0.0201_wp,0.0206_wp,&     ! SB
+     &0.0217_wp,0.0320_wp,0.0428_wp,0.0583_wp,0.0773_wp,0.0856_wp,0.0985_wp,0.1310_wp,&     ! SB
+     &0.1310_wp,0.1906_wp,0.2625_wp,0.3154_wp,0.3869_wp,0.4787_wp,0.5279_wp,0.6272_wp,&     ! SB
+     &0.6941_wp,0.7286_wp,0.7358_wp,0.7177_wp,0.6955_wp,0.0616_wp/),(/jpsw+jpband,5/))      ! SB   
+  ! << sylvia_20200303
+    
+  ! >> sylvia_20200303 
+  ! Below I have taken out tune_dust for simplicity, assuming it equals one.
+  ! It would multiply the third term.
   DO jspec=1,jpband
     DO jk=1,klev
       jkb = klev+1-jk
       ! LW opt thickness of aerosols
       aer_tau_lw_vr(jk,jspec) =  zaeq1(jkb) * zaea_rrtm(jspec,1) &
       &                         + zaeq2(jl,jkb) * zaea_rrtm(jspec,2) &
-      &   + tune_dust(jl,jspec) * zaeq3(jl,jkb) * zaea_rrtm(jspec,3) &
+      &                         + zaeq3(jl,jkb) * zaea_rrtm(jspec,3) &
       &                         + zaeq4(jl,jkb) * zaea_rrtm(jspec,4) &
       &                         + zaeq5(jl,jkb) * zaea_rrtm(jspec,5)
       
     ENDDO
   ENDDO
+  
   DO jspec=1+jpband,jpband+jpsw
     DO jk=1,klev
       jkb = klev+1-jk
@@ -444,14 +648,7 @@
   &    aer_tau_sw_vr   ,aer_cg_sw_vr    ,aer_piz_sw_vr                   ,&
   &    ssi_radt                                                          ,&
   !    output
-  &    flx_dnsw        ,flx_upsw        ,flx_dnsw_clr    ,flx_upsw_clr,   &
-  !    optional output
-  &    flxd_dff_sfc=flx_dnsw_diff_sfc ,                                   &
-  &    flxd_par_sfc    = flx_dnpar_sfc,                                   &
-  &    vis_frc_sfc     = vis_frc_sfc,                                     &
-  &    nir_dff_frc_sfc = nir_dff_frc_sfc,                                 &
-  &    vis_dff_frc_sfc = vis_dff_frc_sfc,                                 &
-  &    par_dff_frc_sfc = par_dff_frc_sfc                                  )
+  &    flx_dnsw        ,flx_upsw        ,flx_dnsw_clr    ,flx_upsw_clr    )
 
 
   ! 5.0 Post Processing
