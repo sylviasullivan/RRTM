@@ -6,18 +6,57 @@
 !! Initial Release by Thorsten Reinhardt, AGeoBw, Offenbach (2011-10-18)
 !!
 ! >> sylvia_20200305, Changing the input from mtime_datetime to day, month, hour, minute.
-SUBROUTINE calc_o3_gems(month, day, hour, minute, latt, pp_hl, xm_o3)
+MODULE o3_gems
 
-    INTEGER, INTENT(in) :: month, day, hour, minute
+! >> sylvia_20200318
+! Make this back into a module
+USE o3_gems_data,   ONLY: rghg7
+IMPLICIT NONE
+PRIVATE
+PUBLIC :: calc_o3_gems
+  
+CONTAINS
+! << sylvia_20200318
+
+  SUBROUTINE calc_o3_gems(month, day, hour, minute, latt, klev, pp_hl, dpres_mc, xm_o3)
+
+    ! >> sylvia_20200309
+    ! Set up the wp type that is often used below.
+    ! >> sylvia_20200313
+    INTEGER, PARAMETER :: pd =  12
+    INTEGER, PARAMETER :: rd = 307
+    INTEGER, PARAMETER :: dp = SELECTED_REAL_KIND(pd,rd) !< double precision
+    INTEGER, PARAMETER :: wp = dp
+    REAL(wp), PARAMETER :: pi = 3.14159265358979323846264338327950288_wp
+    REAL(wp), PARAMETER ::  rad2deg = 180.0_wp/pi
+    REAL(wp), PARAMETER :: deg2rad = pi/180.0_wp
+    ! << sylvia_20200309
+    
+    INTEGER, INTENT(in)  ::        &
+      &  klev,                     & !< number of levels
+      &  month,                    & !< month associated with this profile, sylvia_20200309
+      &  day,                      & !< day associated with this profile, sylvia_20200305
+      &  hour,                     & !< hour associated with this profile
+      &  minute                      !< minute associated with this profile
+    ! >> sylvia_20200318
+    REAL(wp), INTENT(in) ::        &
+      & latt                         ! >> sylvia_20200318, Input latitude.
+    REAL(wp)  ::                   & ! >> sylvia_20200310, Ideally I would want INTENT(in) here...
+      &  dpres_mc(klev),           & !< layer thickness with respect to pressure
+      &  pp_hl(klev+1)               !< half level pressure in Pa
 
     ! >> sylvia_20200305
     ! Changing the TYPE(t_external_data), INTENT(inout) :: ext_data to just REAL, INTENT(out) :: xm_o3
-    REAL, INTENT(out) :: xm_o3
+    REAL(wp), INTENT(out) ::       &
+      &  xm_o3(klev)
     ! << sylvia_20200305
 
     CHARACTER(len=*), PARAMETER :: routine = 'calc_o3_gems'
     INTEGER , PARAMETER :: ilat = 64, nlev_gems = 91
+    
 
+    
+    
     ! Taken from su_ghgclim.F90 of ECMWF's IFS (37r2).
     REAL(wp), PARAMETER     :: zrefp(nlev_gems) = (/ &
       & 0.10000000E+01_wp, 0.29900000E+01_wp, 0.56834998E+01_wp, 0.10147500E+02_wp, &
@@ -55,19 +94,28 @@ SUBROUTINE calc_o3_gems(month, day, hour, minute, latt, pp_hl, xm_o3)
       & 283320._wp, 327960._wp, 371880._wp, 415800._wp, 459720._wp, 503640._wp /)    
 
     ! local fields
+    ! >> sylvia_20200309
+    ! Below syntax like idx(0:klev) or zlat(0:ilat+1) caused errors.
+    ! Rewritten as simply idx(klev) or zlat(ilat+1)
+    ! >> sylvia_20200313
+    ! Removing unused dtdz,deltaz,o3_clim variables below. Replacing l_found by lfound.
     INTEGER  :: idx0(0:klev)
     REAL(wp) :: zlat(0:ilat+1)
     REAL(wp) :: zozn(0:ilat+1,1:nlev_gems)
+    REAL(wp) :: zpresh(0:nlev_gems)
+    REAL(wp) :: rclpr(0:nlev_gems)
     REAL(wp) :: zo3(1:nlev_gems)
     REAL(wp) :: zviozo(0:klev)
-    REAL(wp) :: zozovi(0:klev)
-    LOGICAL  :: l_found
+    REAL(wp) :: zozovi(0:nlev_gems) 
+    ! >> sylvia_20200324, changing klev to nlev_gems for zozovi
 
     ! local scalars
-    INTEGER  :: jk,jkk,jk1,jl !loop indices
+    ! >> sylvia_20200310, Replaced LOGICAL :: lfound_all below with LOGICAL :: lfound
+    ! >> sylvia_20200313, Removing jk1,zadd_o3 below.
+    INTEGER  :: jk,jkk,jl !loop indices
     INTEGER  :: idy,im,imn,im1,im2,jk_start
-    REAL(wp) :: ztimi,zxtime,zjl,zlatint,zint,zadd_o3
-    LOGICAL  :: lfound_all
+    REAL(wp) :: ztimi,zxtime,zjl,zlatint,zint
+    LOGICAL  :: lfound
     
     ! >> sylvia_20200305
     ! Copying some parameters from rrtm_interface
@@ -116,7 +164,10 @@ SUBROUTINE calc_o3_gems(month, day, hour, minute, latt, pp_hl, xm_o3)
         ENDIF
       ENDDO
       IF ( IM1 == 0 .OR. IM2 == 0 ) THEN
-        CALL finish(TRIM(routine),'Problem with time interpolation in suecozc!')
+        ! >> sylvia_20200318
+        ! Remove the CALL finish(TRIM(routine)) and replace with print
+        WRITE(*,*) 'calc_o3_gems: Problem with time interpolation in suecozc!'
+        ! << sylvia_20200318
       ENDIF
     ENDIF
 
@@ -130,7 +181,6 @@ SUBROUTINE calc_o3_gems(month, day, hour, minute, latt, pp_hl, xm_o3)
     ENDDO
     ZPRESH(NLEV_GEMS)=110000._wp
     RCLPR(nlev_gems) =ZPRESH(nlev_gems)
-
     ! Preparations for latitude interpolations
 
     zlatint=180._wp/REAL(ilat,wp)
@@ -178,7 +228,7 @@ SUBROUTINE calc_o3_gems(month, day, hour, minute, latt, pp_hl, xm_o3)
     ! From radghg.F90 of ECMWF's IFS.
     zozovi(0) = 0._wp
     DO jkk = 1, nlev_gems
-      zozovi(jkk) = zozovi(jkk-1,) + zo3(jkk)
+      zozovi(jkk) = zozovi(jkk-1) + zo3(jkk)
     ENDDO
 
     ! REDISTRIBUTE THE VERTIC. INTEGR. CLIM. O3 ON THE MODEL GRID
@@ -188,34 +238,38 @@ SUBROUTINE calc_o3_gems(month, day, hour, minute, latt, pp_hl, xm_o3)
     jk_start = 0
 
     DO jk = 0, klev
-      l_found(:) = .FALSE.
-      lfound_all = .FALSE.
+      lfound = .FALSE.
+      ! >> sylvia_20200310, Removing the lfound_all = .FALSE. initialization.
       DO jkk = jk_start,nlev_gems-1
         IF( pp_hl(jk+1) >= RCLPR(jkk)  &
           & .AND. pp_hl(jk+1) < RCLPR(jkk+1)) THEN
           ZINT = (pp_hl(jk+1) - RCLPR(jkk))/(RCLPR(jkk+1) - RCLPR(jkk)) 
           ZVIOZO(JK) = ZOZOVI(jkk) + ZINT * (ZOZOVI(jkk+1) - ZOZOVI(jkk))
-          l_found = .TRUE.
+          lfound = .TRUE.
           idx0(jk) = jkk
         ELSEIF ( pp_hl(jk+1) > RCLPR(nlev_gems) ) THEN
-          l_found = .TRUE.
+          lfound = .TRUE.
           idx0(jk) = nlev_gems
         ENDIF
 
-        IF (ALL(l_found(i_startidx:i_endidx))) THEN
-          lfound_all = .TRUE.
+        ! >> sylvia_20200310
+        ! Taking the ALL operator off of ALL(l_found) below and removing lfound_all = .TRUE.
+        IF (lfound) THEN
           EXIT
         ENDIF
+        ! << sylvia_20200310
       ENDDO !jkk
-      IF (lfound_all) THEN
-        jk_start = MIN(MINVAL(idx0(jk)),nlev_gems-1)
+      ! >> sylvia_20200310
+      ! Changed lfound_all to lfound below. Removed MINVAL(idx0(jk)) below as there's no array.
+      IF (lfound) THEN
+        jk_start = MIN(idx0(jk),nlev_gems-1)
       ENDIF
+      ! << sylvia_20200310
     ENDDO !jk
 
     ! COMPUTE THE MASS MIXING RATIO
     DO jk = 1, klev
-          xm_o3(jk) = (ZVIOZO(jk) - ZVIOZO(jk-1)) / p_diag%dpres_mc(jk)
-    ! >> sylvia_20200305 
+        xm_o3(jk) = (ZVIOZO(jk) - ZVIOZO(jk-1)) / dpres_mc(jk)
     ! Assuming that ltuning_ozone is 0 and removing the associated IF here.
     ENDDO
 
@@ -226,3 +280,4 @@ SUBROUTINE calc_o3_gems(month, day, hour, minute, latt, pp_hl, xm_o3)
  
   END SUBROUTINE calc_o3_gems
 
+END MODULE o3_gems
