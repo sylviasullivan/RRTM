@@ -122,10 +122,10 @@ PROGRAM rrtm_driver
     ! The last half-level is the last full-level plus the difference down to the second-to-last half-level.
     pp_hl(1)      = pp_fl(1) - (pp_hl(2) - pp_fl(1))
     pp_hl(klev+1) = pp_fl(klev) + (pp_fl(klev) - pp_hl(klev))
-    
+
     ! Surface pressure in [Pa], Factor of 100 for hPa -> Pa
     pp_sfc = ellingson(2,1)*100._wp
-    
+
     ! Full-level temperatures in [K]
     tk_fl = ellingson(3,:)
 
@@ -141,10 +141,10 @@ PROGRAM rrtm_driver
 
     ! Specific humidity profile in [kg kg-1]
     xm_vap = ellingson(6,:)
-    
+
     ! Specific cloud liquid profile in [kg kg-1]
     xm_liq(:)  = 0._wp
-    
+
     ! Specific cloud ice water profile in [kg kg-1]
     xm_ice = (/ 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, &
               & 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, &
@@ -154,7 +154,7 @@ PROGRAM rrtm_driver
               & 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, &
               & 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, &
               & 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp /)
-    !xm_ice(indx) = qi_val
+    xm_ice(indx) = qi_val
 
     ! Cloud droplet number concentration [m-3], 0.1 cm-3 below
     ! For some reason I don't yet understand, we need a non-zero value below to avoid runtime errors.
@@ -170,7 +170,7 @@ PROGRAM rrtm_driver
     ! Black carbon
     aotbc = (/ 0.00266 , 0.003283, 0.003511, 0.00207 , 0.001312, 0.00208 , 0.004036, &
              & 0.003704, 0.002956, 0.002389, 0.001803, 0.002434 /)
-    
+
     ! Sulfate
     aotso4 = (/ 0.023888, 0.020334, 0.020786, 0.019716, 0.025483, 0.019174, 0.028141, &
               & 0.03837 , 0.035887, 0.025932, 0.014476, 0.016929 /)
@@ -186,10 +186,10 @@ PROGRAM rrtm_driver
           cld_frc(i) = 1.0_wp
        else
           cld_frc(i) = 0.0_wp
-       end if 
+       end if
     end do
 
-    ! Solar zenith angle 
+    ! Solar zenith angle
     ! Solar declination as in http://naturalfrequency.com/Tregenza_Sharples/Daylight_Algorithms/algorithm_1_11.htm
     ! Month is set to August within the code. July 31st is the 212th day in a non-leap year.
     J        = 212 + day
@@ -227,7 +227,7 @@ PROGRAM rrtm_driver
     & flx_uplw_sfc    ,flx_upsw_sfc    ,flx_uplw_sfc_clr,flx_upsw_sfc_clr,&
     ! optional output
     & flx_upsw_toa                                                        )
-    
+
     ! Output the fluxes
     writeoutput = .true.
     if (writeoutput .eqv. .true.) then
