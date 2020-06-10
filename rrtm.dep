@@ -1,0 +1,163 @@
+# This file is generated automatically. DO NOT EDIT!
+
+rrtm_driver :  \
+	mo_kind.o \
+	mo_lrtm.o \
+	mo_lrtm_coeffs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_netcdf.o \
+	mo_lrtm_par.o \
+	mo_lrtm_rtrnmr.o \
+	mo_lrtm_setup.o \
+	mo_lrtm_taumol.o \
+	mo_srtm.o \
+	mo_srtm_config.o \
+	mo_srtm_kgs.o \
+	mo_srtm_taumol.o \
+	o3_gems.o \
+	o3_gems_data.o \
+	rrtm.o \
+	rrtm_driver.o
+
+mo_kind.o : 
+
+mo_lrtm.o :  \
+	mo_lrtm_coeffs.o \
+	mo_lrtm_rtrnmr.o \
+	mo_lrtm_taumol.o
+
+mo_lrtm_coeffs.o :  \
+	mo_lrtm_taumol.o
+
+mo_lrtm_kgs.o : 
+
+mo_lrtm_netcdf.o : 
+
+mo_lrtm_par.o :  \
+	mo_kind.o
+
+mo_lrtm_rtrnmr.o :  \
+	mo_lrtm_par.o \
+	mo_lrtm_setup.o
+
+mo_lrtm_setup.o :  \
+	mo_kind.o \
+	mo_lrtm_coeffs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_netcdf.o \
+	mo_lrtm_par.o
+
+mo_lrtm_taumol.o :  \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o
+
+mo_srtm.o :  \
+	mo_srtm_config.o \
+	mo_srtm_taumol.o
+
+mo_srtm_config.o :  \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o
+
+mo_srtm_kgs.o : 
+
+mo_srtm_taumol.o :  \
+	mo_srtm_config.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o \
+	mo_srtm_kgs.o
+
+o3_gems.o :  \
+	o3_gems_data.o
+
+o3_gems_data.o : 
+
+rrtm.o :  \
+	mo_lrtm.o \
+	mo_lrtm_setup.o \
+	mo_srtm.o \
+	mo_srtm_config.o \
+	o3_gems.o
+
+rrtm_driver.o :  \
+	rrtm.o
+
+srtm_kgb16.o : 
+
+srtm_kgb17.o : 
+
+srtm_kgb18.o : 
+
+srtm_kgb19.o : 
+
+srtm_kgb20.o : 
+
+srtm_kgb21.o : 
+
+srtm_kgb22.o : 
+
+srtm_kgb23.o : 
+
+srtm_kgb24.o : 
+
+srtm_kgb25.o : 
+
+srtm_kgb26.o : 
+
+srtm_kgb27.o : 
+
+srtm_kgb28.o : 
+
+srtm_kgb29.o : 

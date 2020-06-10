@@ -1,0 +1,19 @@
+#!/bin/bash
+
+make clean; make
+
+# qi = 0.1 or 0.2 g kg-1 at different levels
+allThreads=(196 197 199 200 202 204 205 207 209 210 212 214 215 217
+	218 220 222 224 225 227 229 230 232 234 235 237 239 240 242
+	244 245 247 249 251 252 254 256 257 259 260 261 262 264 266
+	267 269 271)
+for i in {15..61}; do
+    indx=$((i-15))
+    echo "Run "$indx" of 46"
+    ./rrtm_driver ${allThreads[$indx]}_q2 $i 0.2e-03
+    ./rrtm_driver ${allThreads[$indx]}_q1 $i 0.1e-03
+    ./rrtm_driver ${allThreads[$indx]}_q01 $i 0.2e-04
+    ./rrtm_driver ${allThreads[$indx]}_q002 $i 0.2e-05
+done
+
+
