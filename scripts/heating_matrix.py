@@ -19,9 +19,9 @@ g = 9.8
 #tt = np.asarray([196,197,199,200,202,204,205,207,209,210,212,214,215,217,\
 #        218,220,222,225,227,229,230,232,234,235,237,239,240,242,244,\
 #         245,247,249,251,252,254,256,257,260,261,262,264,266,267,269])
-tt = np.asarray([199,200,202,204,205,207,209,210,212,214,215,217,\
+tt = np.asarray([202,204,205,207,209,210,212,214,215,217,\
         218,220,222,225,227,229,230,232,234,235,237,239,240,242,244,\
-         245,247,249,251,252,254,256,257,260,261,262,264,266])
+         245,247,249,251,252,254,256,257,260,261])
 
 # Pressure at half levels
 ellingson = np.genfromtxt(basedir + '/output/tropical_profile_ellingson_250m_formatted_top2bottom.txt')
@@ -39,64 +39,62 @@ tropopause = np.argmin(tt_hl)
 
 fs = 13
 
-# Matrix to hold the LW radiative heating profiles
-Hmat_lw = np.zeros((tt.shape[0],lev+1))
-Hmat_sw = np.zeros((tt.shape[0],lev+1))
+# Matrix to hold the radiative heating profiles
+H = np.zeros((4,tt.shape[0],lev+1))
 
 for c,tk in enumerate(tt):
-    lw = np.genfromtxt(basedir + '/output/q2_3lev/lwflxatm-test' + str(tk) + '_q2.txt')
-    sw = np.genfromtxt(basedir + '/output/q2_3lev/swflxatm-test' + str(tk) + '_q2.txt')
+    lw1 = np.genfromtxt(basedir + '/output/q2_1lev/lwflxatm-test' + str(tk) + '_q2.txt')
+    sw1 = np.genfromtxt(basedir + '/output/q2_1lev/swflxatm-test' + str(tk) + '_q2.txt')
+    lw5 = np.genfromtxt(basedir + '/output/q2_3lev/lwflxatm-test' + str(tk) + '_q2.txt')
+    sw5 = np.genfromtxt(basedir + '/output/q2_3lev/swflxatm-test' + str(tk) + '_q2.txt')
+
     # First column is all-sky. Second column is clear-sky.
     # The factor -1 is to define outgoing fluxes as positive.
-    lwcld = -1.*(lw[0]-lw[1])
-    swcld = -1.*(sw[0]-sw[1])
+    lwcld1 = -1.*(lw1[0]-lw1[1])
+    swcld1 = -1.*(sw1[0]-sw1[1])
+    lwcld5 = -1.*(lw5[0]-lw5[1])
+    swcld5 = -1.*(sw5[0]-sw5[1])
 
     # Calculate the longwave and shortwave heating rates.
     # Factor of 3600 converts from K s-1 to K day-1.
-    H = g/cp*np.gradient(lwcld,pp_hl*100.)*3600
-    Hmat_lw[c] = H
-    H = g/cp*np.gradient(swcld,pp_hl*100.)*3600
-    Hmat_sw[c] = H
+    H[0,c] = g/cp*np.gradient(lwcld1,pp_hl*100.)*3600.
+    H[1,c] = g/cp*np.gradient(swcld1,pp_hl*100.)*3600.
+    H[2,c] = g/cp*np.gradient(lwcld5,pp_hl*100.)*3600.
+    H[3,c] = g/cp*np.gradient(swcld5,pp_hl*100.)*3600.
 
 
-fig, ax = plt.subplots(nrows=1,ncols=2)
+fig, ax = plt.subplots(nrows=2,ncols=2)
+# Some factors to make the plot.. fontsize, tick intervals, and iterator.
 fs = 13
 interval = 5
+c = 0
+mm = [[-1.1,1.7],[-0.11,0.17],[-1.1,1.7],[-0.11,0.17]]
+
 yt_tt_hl = np.array([int(t) for t in tt_hl[::interval]])
 yt_pp_hl = np.array([int(t) for t in pp_hl[::interval]])
 xt_tt = np.array([int(t) for t in tt[::interval]])
 
-sns.heatmap((Hmat_lw.T),norm=colors.SymLogNorm(vmin=Hmat_lw.min(),vmax=Hmat_lw.max(),linthresh=0.001),
-        cmap=cm.bwr,xticklabels=xt_tt,yticklabels=yt_tt_hl,cbar_kws={'label':r'K day$^{-1}$'},ax=ax[0])
+for i in np.arange(2):
+    for j in np.arange(2):
+        sns.heatmap((H[c].T),norm=colors.SymLogNorm(vmin=H[c].min(),vmax=H[c].max(),linthresh=0.001),
+            cmap=cm.bwr,xticklabels=xt_tt,yticklabels=yt_tt_hl,cbar_kws={'label':r'K day$^{-1}$'},ax=ax[i,j])
 
-# Where is the melting layer?
-ax[0].plot([0,tt.shape[0]],[melting_layer,melting_layer],linewidth=1,color='k',linestyle='--')
-# Where is the tropopause?
-ax[0].plot([0,tt.shape[0]],[tropopause,tropopause],linewidth=1,color='k',linestyle='--')
-# Adjust tick labels
-ax[0].set_xticks(np.arange(0,tt.shape[0],interval))
-ax[0].set_xticklabels(ax[0].get_xticklabels(),rotation=45,fontsize=fs-2)
-ax[0].set_yticks(np.arange(0,tt_hl.shape[0],interval))
-ax[0].set_yticklabels(ax[0].get_yticklabels(),rotation=45,fontsize=fs-2)
-ax[0].set_ylabel('Temperature level of LW heating perturbation [K]',fontsize=fs)
-ax[0].set_xlabel('Temperature level of $q_i$ perturbation [K]',fontsize=fs)
+        # Where is the melting layer?
+        ax[i,j].plot([0,tt.shape[0]],[melting_layer,melting_layer],linewidth=1,color='k',linestyle='--')
+        # Where is the tropopause?
+        ax[i,j].plot([0,tt.shape[0]],[tropopause,tropopause],linewidth=1,color='k',linestyle='--')
+        # Adjust tick labels
+        ax[i,j].set_xticks(np.arange(0,tt.shape[0],interval))
+        ax[i,j].set_xticklabels(ax[i,j].get_xticklabels(),rotation=45,fontsize=fs-2)
+        ax[i,j].set_yticks(np.arange(0,tt_hl.shape[0],interval))
+        ax[i,j].set_yticklabels(ax[i,j].get_yticklabels(),rotation=45,fontsize=fs-2)
+        #ax[i,j].set_ylabel('Temperature level of LW heating perturbation [K]',fontsize=fs)
+        #ax[i,j].set_xlabel('Temperature level of $q_i$ perturbation [K]',fontsize=fs)
+        c += 1
 
 
-sns.heatmap((Hmat_sw.T),norm=colors.SymLogNorm(vmin=Hmat_sw.min(),vmax=Hmat_sw.max(),linthresh=0.001),
-        cmap=cm.bwr,xticklabels=xt_tt,yticklabels=yt_tt_hl,cbar_kws={'label':r'K day$^{-1}$'},ax=ax[1])
-
-# Where is the melting layer?
-ax[1].plot([0,tt.shape[0]],[melting_layer,melting_layer],linewidth=1,color='k',linestyle='--')
-# Where is the tropopause?
-ax[1].plot([0,tt.shape[0]],[tropopause,tropopause],linewidth=1,color='k',linestyle='--')
-# Adjust tick labels
-ax[1].set_xticks(np.arange(0,tt.shape[0],interval))
-ax[1].set_xticklabels(ax[1].get_xticklabels(),rotation=45,fontsize=fs-2)
-ax[1].set_yticks(np.arange(0,tt_hl.shape[0],interval))
-ax[1].set_yticklabels(ax[1].get_yticklabels(),rotation=45,fontsize=fs-2)
-
-plt.ylabel('Temperature level of SW heating perturbation [K]',fontsize=fs)
-plt.xlabel('Temperature level of $q_i$ perturbation [K]',fontsize=fs)
+#plt.ylabel('Temperature level of SW heating perturbation [K]',fontsize=fs)
+#plt.xlabel('Temperature level of $q_i$ perturbation [K]',fontsize=fs)
 
 #fig.savefig('../figures/lwheating_qi002_matrix.pdf',bbox_inches='tight')
 plt.show()
