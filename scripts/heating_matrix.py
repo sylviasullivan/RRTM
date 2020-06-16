@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
-import os
+import os, sys, time
 from os.path import dirname
 import numpy as np
 import seaborn as sns
@@ -45,8 +45,8 @@ H = np.zeros((4,tt.shape[0],lev+1))
 for c,tk in enumerate(tt):
     lw1 = np.genfromtxt(basedir + '/output/q2_1lev/lwflxatm-test' + str(tk) + '_q2.txt')
     sw1 = np.genfromtxt(basedir + '/output/q2_1lev/swflxatm-test' + str(tk) + '_q2.txt')
-    lw5 = np.genfromtxt(basedir + '/output/q2_3lev/lwflxatm-test' + str(tk) + '_q2.txt')
-    sw5 = np.genfromtxt(basedir + '/output/q2_3lev/swflxatm-test' + str(tk) + '_q2.txt')
+    lw5 = np.genfromtxt(basedir + '/output/q2_5lev/lwflxatm-test' + str(tk) + '_q2.txt')
+    sw5 = np.genfromtxt(basedir + '/output/q2_5lev/swflxatm-test' + str(tk) + '_q2.txt')
 
     # First column is all-sky. Second column is clear-sky.
     # The factor -1 is to define outgoing fluxes as positive.
@@ -62,22 +62,44 @@ for c,tk in enumerate(tt):
     H[2,c] = g/cp*np.gradient(lwcld5,pp_hl*100.)*3600.
     H[3,c] = g/cp*np.gradient(swcld5,pp_hl*100.)*3600.
 
+# Calculate the temperature depth of the various tropospheric layers.
+d1 = np.zeros(tt.shape[0])
+d5 = np.zeros(tt.shape[0])
+for k,t in enumerate(tt):
+    j = np.argmin(np.abs(tt_hl[tropopause:] - t))
+    # Take the difference of the midpoint 2-3 levels below and 2-3 levels above.
+    d5[k] = (tt_hl[tropopause+j+2] + tt_hl[tropopause+j+3])/2. - \
+            (tt_hl[tropopause+j-2] + tt_hl[tropopause+j-3])/2.
+    d1[k] = (tt_hl[tropopause+j] + tt_hl[tropopause+j+1])/2. - \
+            (tt_hl[tropopause+j] + tt_hl[tropopause+j-1])/2.
 
-fig, ax = plt.subplots(nrows=2,ncols=2)
-# Some factors to make the plot.. fontsize, tick intervals, and iterator.
+# Sensitivity of the LW/SW heating to the temperature depth.
+dHdT = np.zeros((2,H.shape[1],H.shape[2]))
+d5 = np.tile(d5,(H.shape[2],1)).T
+d1 = np.tile(d1,(H.shape[2],1)).T
+
+# The factor of 6 is an approximate lapse rate to have sensitivity per km depth.
+dHdT[0] = (H[2] - H[0])/(d5 - d1)*6.
+dHdT[1] = (H[3] - H[1])/(d5 - d1)*6.
+
+fig, ax = plt.subplots(nrows=3,ncols=2,figsize=(11,11))
+# Some formatting factors for the plot.. fontsize, tick intervals, and iterator.
 fs = 13
 interval = 5
+interval2 = 8
 c = 0
-mm = [[-1.1,1.7],[-0.11,0.17],[-1.1,1.7],[-0.11,0.17]]
+mm = np.array([[-1.1,1.7],[-0.11,0.17],[-1.1,1.7],[-0.11,0.17]])
+ticz = np.array([[-1,-0.1,0,0.1,1],[-0.1,-0.01,0,0.01,0.1],[-1,-0.1,0,0.1,1],[-0.1,-0.01,0,0.01,0.1]])
+lwsw = ['LW','SW']
 
-yt_tt_hl = np.array([int(t) for t in tt_hl[::interval]])
+yt_tt_hl = np.array([int(t) for t in tt_hl[::interval2]])
 yt_pp_hl = np.array([int(t) for t in pp_hl[::interval]])
 xt_tt = np.array([int(t) for t in tt[::interval]])
 
 for i in np.arange(2):
     for j in np.arange(2):
-        sns.heatmap((H[c].T),norm=colors.SymLogNorm(vmin=H[c].min(),vmax=H[c].max(),linthresh=0.001),
-            cmap=cm.bwr,xticklabels=xt_tt,yticklabels=yt_tt_hl,cbar_kws={'label':r'K day$^{-1}$'},ax=ax[i,j])
+        sns.heatmap((H[c].T),norm=colors.SymLogNorm(vmin=mm[c,0],vmax=mm[c,1],linthresh=0.001),
+            cmap=cm.bwr,xticklabels=xt_tt,yticklabels=yt_tt_hl,cbar_kws={'label':r'K day$^{-1}$','ticks':ticz[c]},ax=ax[i,j])
 
         # Where is the melting layer?
         ax[i,j].plot([0,tt.shape[0]],[melting_layer,melting_layer],linewidth=1,color='k',linestyle='--')
@@ -86,15 +108,24 @@ for i in np.arange(2):
         # Adjust tick labels
         ax[i,j].set_xticks(np.arange(0,tt.shape[0],interval))
         ax[i,j].set_xticklabels(ax[i,j].get_xticklabels(),rotation=45,fontsize=fs-2)
-        ax[i,j].set_yticks(np.arange(0,tt_hl.shape[0],interval))
+        ax[i,j].set_yticks(np.arange(0,tt_hl.shape[0],interval2))
         ax[i,j].set_yticklabels(ax[i,j].get_yticklabels(),rotation=45,fontsize=fs-2)
-        #ax[i,j].set_ylabel('Temperature level of LW heating perturbation [K]',fontsize=fs)
-        #ax[i,j].set_xlabel('Temperature level of $q_i$ perturbation [K]',fontsize=fs)
+        if i == 1:
+           ax[i,j].set_ylabel('Level of ' + lwsw[j] + ' heating perturbation [K]',fontsize=fs)
         c += 1
 
+for i in np.arange(2):
+    sns.heatmap(dHdT[i].T,cmap=cm.bwr,xticklabels=xt_tt,yticklabels=yt_tt_hl,cbar_kws={'label':r'K day$^{-1}$ km$^{-1}$'},ax=ax[2,i])
+    # Where is the melting layer?
+    ax[2,i].plot([0,tt.shape[0]],[melting_layer,melting_layer],linewidth=1,color='k',linestyle='--')
+    # Where is the tropopause?
+    ax[2,i].plot([0,tt.shape[0]],[tropopause,tropopause],linewidth=1,color='k',linestyle='--')
+    # Adjust tick labels
+    ax[2,i].set_xticks(np.arange(0,tt.shape[0],interval))
+    ax[2,i].set_xticklabels(ax[i,j].get_xticklabels(),rotation=45,fontsize=fs-2)
+    ax[2,i].set_yticks(np.arange(0,tt_hl.shape[0],interval2))
+    ax[2,i].set_yticklabels(ax[i,j].get_yticklabels(),rotation=45,fontsize=fs-2)
+    ax[2,i].set_xlabel('Level of $q_i$ perturbation [K]',fontsize=fs)
 
-#plt.ylabel('Temperature level of SW heating perturbation [K]',fontsize=fs)
-#plt.xlabel('Temperature level of $q_i$ perturbation [K]',fontsize=fs)
-
-#fig.savefig('../figures/lwheating_qi002_matrix.pdf',bbox_inches='tight')
+fig.savefig('../figures/heating_matrix_qi2.pdf',bbox_inches='tight')
 plt.show()
