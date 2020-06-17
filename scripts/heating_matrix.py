@@ -20,8 +20,7 @@ g = 9.8
 #        218,220,222,225,227,229,230,232,234,235,237,239,240,242,244,\
 #         245,247,249,251,252,254,256,257,260,261,262,264,266,267,269])
 tt = np.asarray([202,204,205,207,209,210,212,214,215,217,\
-        218,220,222,225,227,229,230,232,234,235,237,239,240,242,244,\
-         245,247,249,251,252,254,256,257,260,261])
+        218,220,222,225,227,229,230,232,234,235,237,239])
 
 # Pressure at half levels
 ellingson = np.genfromtxt(basedir + '/output/tropical_profile_ellingson_250m_formatted_top2bottom.txt')
@@ -82,50 +81,52 @@ d1 = np.tile(d1,(H.shape[2],1)).T
 dHdT[0] = (H[2] - H[0])/(d5 - d1)*6.
 dHdT[1] = (H[3] - H[1])/(d5 - d1)*6.
 
-fig, ax = plt.subplots(nrows=3,ncols=2,figsize=(11,11))
+fig, ax = plt.subplots(nrows=1,ncols=2,figsize=(11,6))
 # Some formatting factors for the plot.. fontsize, tick intervals, and iterator.
 fs = 13
 interval = 5
 interval2 = 8
-c = 0
-mm = np.array([[-1.1,1.7],[-0.11,0.17],[-1.1,1.7],[-0.11,0.17]])
+c = 2
+mm = np.array([[-1,1.5],[-0.1,0.15],[-1.1,1.7],[-0.11,0.17]])
 ticz = np.array([[-1,-0.1,0,0.1,1],[-0.1,-0.01,0,0.01,0.1],[-1,-0.1,0,0.1,1],[-0.1,-0.01,0,0.01,0.1]])
 lwsw = ['LW','SW']
+lbl = ['',r'K day$^{-1}','',r'K day$^{-1}$']
 
 yt_tt_hl = np.array([int(t) for t in tt_hl[::interval2]])
 yt_pp_hl = np.array([int(t) for t in pp_hl[::interval]])
 xt_tt = np.array([int(t) for t in tt[::interval]])
 
 for i in np.arange(2):
-    for j in np.arange(2):
-        sns.heatmap((H[c].T),norm=colors.SymLogNorm(vmin=mm[c,0],vmax=mm[c,1],linthresh=0.001),
-            cmap=cm.bwr,xticklabels=xt_tt,yticklabels=yt_tt_hl,cbar_kws={'label':r'K day$^{-1}$','ticks':ticz[c]},ax=ax[i,j])
+    #sns.heatmap((H[c].T),norm=colors.SymLogNorm(vmin=mm[c,0],vmax=mm[c,1],linthresh=0.001),
+    #   cmap=cm.bwr,xticklabels=xt_tt,yticklabels=yt_tt_hl,cbar_kws={'label':lbl[c],'ticks':ticz[c]},ax=ax[i])
+    sns.heatmap((H[c].T),norm=MidpointNormalize(midpoint=0.,vmin=mm[c,0],vmax=mm[c,1]),cmap=cm.bwr,
+        xticklabels=xt_tt,yticklabels=yt_tt_hl,ax=ax[i])
 
-        # Where is the melting layer?
-        ax[i,j].plot([0,tt.shape[0]],[melting_layer,melting_layer],linewidth=1,color='k',linestyle='--')
-        # Where is the tropopause?
-        ax[i,j].plot([0,tt.shape[0]],[tropopause,tropopause],linewidth=1,color='k',linestyle='--')
-        # Adjust tick labels
-        ax[i,j].set_xticks(np.arange(0,tt.shape[0],interval))
-        ax[i,j].set_xticklabels(ax[i,j].get_xticklabels(),rotation=45,fontsize=fs-2)
-        ax[i,j].set_yticks(np.arange(0,tt_hl.shape[0],interval2))
-        ax[i,j].set_yticklabels(ax[i,j].get_yticklabels(),rotation=45,fontsize=fs-2)
-        if i == 1:
-           ax[i,j].set_ylabel('Level of ' + lwsw[j] + ' heating perturbation [K]',fontsize=fs)
-        c += 1
-
-for i in np.arange(2):
-    sns.heatmap(dHdT[i].T,cmap=cm.bwr,xticklabels=xt_tt,yticklabels=yt_tt_hl,cbar_kws={'label':r'K day$^{-1}$ km$^{-1}$'},ax=ax[2,i])
     # Where is the melting layer?
-    ax[2,i].plot([0,tt.shape[0]],[melting_layer,melting_layer],linewidth=1,color='k',linestyle='--')
+    ax[i].plot([0,tt.shape[0]],[melting_layer,melting_layer],linewidth=1,color='k',linestyle='--')
     # Where is the tropopause?
-    ax[2,i].plot([0,tt.shape[0]],[tropopause,tropopause],linewidth=1,color='k',linestyle='--')
+    ax[i].plot([0,tt.shape[0]],[tropopause,tropopause],linewidth=1,color='k',linestyle='--')
     # Adjust tick labels
-    ax[2,i].set_xticks(np.arange(0,tt.shape[0],interval))
-    ax[2,i].set_xticklabels(ax[i,j].get_xticklabels(),rotation=45,fontsize=fs-2)
-    ax[2,i].set_yticks(np.arange(0,tt_hl.shape[0],interval2))
-    ax[2,i].set_yticklabels(ax[i,j].get_yticklabels(),rotation=45,fontsize=fs-2)
-    ax[2,i].set_xlabel('Level of $q_i$ perturbation [K]',fontsize=fs)
+    ax[i].set_xticks(np.arange(0,tt.shape[0],interval))
+    ax[i].set_xticklabels(ax[i].get_xticklabels(),rotation=45,fontsize=fs-2)
+    ax[i].set_yticks(np.arange(0,tt_hl.shape[0],interval2))
+    ax[i].set_yticklabels(ax[i].get_yticklabels(),rotation=45,fontsize=fs-2)
+    ax[i].set_xlabel(r'Level of $q_i$ perturbation [K]',fontsize=fs)
+    ax[i].set_ylabel('Level of ' + lwsw[i] + ' heating perturbation [K]',fontsize=fs)
+    c += 1
 
-fig.savefig('../figures/heating_matrix_qi2.pdf',bbox_inches='tight')
+#for i in np.arange(2):
+#    sns.heatmap(dHdT[i].T,cmap=cm.bwr,xticklabels=xt_tt,yticklabels=yt_tt_hl,cbar_kws={'label':r'K day$^{-1}$ km$^{-1}$'},ax=ax[2,i])
+#    # Where is the melting layer?
+#    ax[2,i].plot([0,tt.shape[0]],[melting_layer,melting_layer],linewidth=1,color='k',linestyle='--')
+#    # Where is the tropopause?
+#    ax[2,i].plot([0,tt.shape[0]],[tropopause,tropopause],linewidth=1,color='k',linestyle='--')
+#    # Adjust tick labels
+#    ax[2,i].set_xticks(np.arange(0,tt.shape[0],interval))
+#    ax[2,i].set_xticklabels(ax[i,j].get_xticklabels(),rotation=45,fontsize=fs-2)
+#    ax[2,i].set_yticks(np.arange(0,tt_hl.shape[0],interval2))
+#    ax[2,i].set_yticklabels(ax[i,j].get_yticklabels(),rotation=45,fontsize=fs-2)
+#    ax[2,i].set_xlabel('Level of $q_i$ perturbation [K]',fontsize=fs)
+
+fig.savefig('../figures/heating_matrix_qi2_lin.pdf',bbox_inches='tight')
 plt.show()
