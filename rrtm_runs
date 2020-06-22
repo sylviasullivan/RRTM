@@ -2,6 +2,22 @@
 
 #make clean; make
 
+# Fixed 'low' / 'high' set of cloud top and bottom temperatures.
+file="IWP_iterator.txt"
+c=1
+while IFS= read line
+do
+     if [ ${#c} -eq 1 ]; then
+        cstr="0"$c
+     else
+        cstr=$c
+     fi
+     c=$((c+1))
+     IWP=${line}
+     echo $IWP
+     ./rrtm_driver "IWP"${cstr}"_TLO" $IWP
+done <"$file"
+
 # Fixed IWP and warm the cloud top temperature to 231 K.
 #for CTT in {200..231}; do
 #    echo $CTT
@@ -9,10 +25,10 @@
 #done
 
 # Fixed IWP and cool the cloud bottom temperature to 206 K.
-for CBT in {206..237}; do
-    echo $CBT
-    ./rrtm_driver "Tb_"$CBT 200 $CBT
-done
+#for CBT in {206..237}; do
+#    echo $CBT
+#    ./rrtm_driver "Tb_"$CBT 200 $CBT
+#done
 
 # Inject qi = 0.1 or 0.2 g kg-1 at different levels
 #allThreads=(196 197 199 200 202 204 205 207 209 210 212 214 215 217

@@ -20,7 +20,8 @@ PROGRAM rrtm_driver
     ! >> sylvia_20200520
     REAL, DIMENSION(9,81)  :: ellingson
     INTEGER                :: i, indx_top(1), indx_bottom(1)  ! >> sylvia_20200617
-    INTEGER                :: T_top,T_bottom                  ! >> sylvia_20200619
+    INTEGER, PARAMETER     :: T_top    = 200
+    INTEGER, PARAMETER     :: T_bottom = 218                 ! >> sylvia_20200619
     REAL(wp)               :: qi_val, qi_val2
     REAL(wp)               :: sDeclin, delJ, J, L0, L1, L2, L3, lonn
     REAL(wp)               :: sidereal, LHA, taud
@@ -76,11 +77,11 @@ PROGRAM rrtm_driver
     ! Pass in four inputs as alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif
     INTEGER  :: num_args, ix
     CHARACTER(LEN=12), DIMENSION(:), ALLOCATABLE :: args
-    CHARACTER(LEN=6) :: file_tag
+    CHARACTER(LEN=9) :: file_tag
     ! >> sylvia_20200618, To calculate column-integrated vapor or condensate (CWVC or IWP).
     REAL(wp)            :: CWVC, IWP_p, IWP_z  ! >> sylvia_20200622, Testing z and p integral equivalence
     REAL(wp), DIMENSION(:), ALLOCATABLE :: integ, integ2
-    REAL(wp), PARAMETER :: IWP_param = 0.3_wp  !< fixed ice water path of 300 g m-2 [kg m-2]
+    REAL(wp)            :: IWP_param           !< fixed ice water path of 300 g m-2 [kg m-2]
     REAL(wp), PARAMETER :: densAir   = 1.3     !< (approximate) density of air [kg m-3]
     REAL(wp), PARAMETER :: densIce   = 920     !< (approximate) density of ice [kg m-3]
     REAL(wp), PARAMETER :: g         = 9.8     !< gravitational acceleration [m s-2]
@@ -93,8 +94,9 @@ PROGRAM rrtm_driver
        CALL get_command_argument(ix,args(ix))
     END DO
     READ(args(1),*) file_tag
-    READ(args(2),*) T_top
-    READ(args(3),*) T_bottom
+    READ(args(2),*) IWP_param
+    !READ(args(2),*) T_top
+    !READ(args(3),*) T_bottom
     !READ(args(4),*) qi_val
     ! << sylvia_20200528
 
