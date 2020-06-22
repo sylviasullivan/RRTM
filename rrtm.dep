@@ -10,6 +10,7 @@ rrtm_driver :  \
 	mo_lrtm_rtrnmr.o \
 	mo_lrtm_setup.o \
 	mo_lrtm_taumol.o \
+	mo_num_integration.o \
 	mo_srtm.o \
 	mo_srtm_config.o \
 	mo_srtm_kgs.o \
@@ -31,7 +32,23 @@ mo_lrtm_coeffs.o :  \
 
 mo_lrtm_kgs.o : 
 
-mo_lrtm_netcdf.o : 
+mo_lrtm_netcdf.o :  \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o \
+	mo_lrtm_kgs.o
 
 mo_lrtm_par.o :  \
 	mo_kind.o
@@ -79,6 +96,8 @@ mo_lrtm_taumol.o :  \
 	mo_lrtm_kgs.o \
 	mo_lrtm_kgs.o \
 	mo_lrtm_kgs.o
+
+mo_num_integration.o : 
 
 mo_srtm.o :  \
 	mo_srtm_config.o \
@@ -132,6 +151,7 @@ rrtm.o :  \
 	o3_gems.o
 
 rrtm_driver.o :  \
+	mo_num_integration.o \
 	rrtm.o
 
 srtm_kgb16.o : 

@@ -1,7 +1,8 @@
 PROGRAM rrtm_driver
+    USE mo_num_integration, ONLY: INTEGRATE, TRAPEZOID_RULE2
     USE rrtm
     IMPLICIT NONE
- 
+
     ! >> sylvia_20200310
     LOGICAL  :: writeoutput
     INTEGER  ::         &
@@ -17,11 +18,13 @@ PROGRAM rrtm_driver
     REAL(wp), PARAMETER :: pi = 4 * ATAN(1.0_8) ! >> sylvia_20200602
 
     ! >> sylvia_20200520
-    REAL, DIMENSION(9,81) :: ellingson
-    INTEGER               :: i,indx,time
-    REAL(wp)              :: qi_val
-    REAL(wp)              :: sDeclin, delJ, J, L0, L1, L2, L3, lonn
-    REAL(wp)              :: sidereal, LHA, taud
+    REAL, DIMENSION(9,81)  :: ellingson
+    INTEGER                :: i, indx_top(1), indx_bottom(1)  ! >> sylvia_20200617
+    INTEGER                :: T_top,T_bottom                  ! >> sylvia_20200619
+    REAL(wp)               :: qi_val, qi_val2
+    REAL(wp)               :: sDeclin, delJ, J, L0, L1, L2, L3, lonn
+    REAL(wp)               :: sidereal, LHA, taud
+    INTEGER                :: tropopause(1) ! >> sylvia_20200619
     ! << sylvia_20200520
 
     ! >> sylvia_20200310
@@ -34,6 +37,8 @@ PROGRAM rrtm_driver
       &  alb_vis_dif,              & !< surface albedo for vis range and dif light
       &  alb_nir_dif,              & !< surface albedo for NIR range and dif light
       &  emis_rad,                 & !< longwave surface emissivity
+      &  z_fl(klev),               & !< full level altitude in m   >> sylvia_20200619
+      &  z_hl(klev+1),             & !< half level altiude in m    >> sylvia_20200622
       &  pp_fl(klev),              & !< full level pressure in Pa
       &  pp_hl(klev+1),            & !< half level pressure in Pa
       &  pp_sfc,                   & !< surface pressure in Pa
@@ -71,16 +76,15 @@ PROGRAM rrtm_driver
     ! Pass in four inputs as alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif
     INTEGER  :: num_args, ix
     CHARACTER(LEN=12), DIMENSION(:), ALLOCATABLE :: args
-    CHARACTER(LEN=10) :: file_tag
-
-    ! >> sylvia_20200406
-    !num_args = command_argument_count()
-    !ALLOCATE(args(num_args))
-    !DO ix = 1, num_args
-    !    CALL get_command_argument(ix,args(ix))
-    !END DO
-    !READ(args(1),*) alb_vis_dir
-    ! << sylvia_20200406
+    CHARACTER(LEN=6) :: file_tag
+    ! >> sylvia_20200618, To calculate column-integrated vapor or condensate (CWVC or IWP).
+    REAL(wp)            :: CWVC, IWP_p, IWP_z  ! >> sylvia_20200622, Testing z and p integral equivalence
+    REAL(wp), DIMENSION(:), ALLOCATABLE :: integ, integ2
+    REAL(wp), PARAMETER :: IWP_param = 0.3_wp  !< fixed ice water path of 300 g m-2 [kg m-2]
+    REAL(wp), PARAMETER :: densAir   = 1.3     !< (approximate) density of air [kg m-3]
+    REAL(wp), PARAMETER :: densIce   = 920     !< (approximate) density of ice [kg m-3]
+    REAL(wp), PARAMETER :: g         = 9.8     !< gravitational acceleration [m s-2]
+    ! << sylvia_20200618
 
     ! >> sylvia_20200528
     num_args = command_argument_count()
@@ -89,9 +93,9 @@ PROGRAM rrtm_driver
        CALL get_command_argument(ix,args(ix))
     END DO
     READ(args(1),*) file_tag
-    READ(args(2),*) indx
-    READ(args(3),*) qi_val
-    !READ(args(3),*) time
+    READ(args(2),*) T_top
+    READ(args(3),*) T_bottom
+    !READ(args(4),*) qi_val
     ! << sylvia_20200528
 
     ! Consider an ocean surface with low albedo at 7 pm in the tropics.
@@ -100,7 +104,7 @@ PROGRAM rrtm_driver
     alb_vis_dif = 0.05_wp
     alb_nir_dif = 0.05_wp
     day         = 8
-    hour        = time
+    hour        = 12
     minute      = 0
     latt        = 0.0872_wp  !  5 deg N to radians
     lonn        = 1.1344_wp  ! 65 deg E to radians
@@ -109,6 +113,21 @@ PROGRAM rrtm_driver
 
     open(1,file='output/tropical_profile_ellingson_250m_formatted_top2bottom.txt')
     read(1,*) ellingson
+
+    ! Full-level altitudes [m]
+    z_fl  = ellingson(1,:)*1000._wp
+
+    ! Half-level altitudes [m]
+    do i = 2, klev
+       z_hl(i) = (z_fl(i-1) + z_fl(i))/2.0_wp
+    end do
+
+    ! The first half-level is the first full-level minus the difference up to
+    ! the second half-level.
+    ! The last half-level is the last full-level plus the difference down to the
+    ! second-to-last half-level.
+    z_hl(1)      = z_fl(1) - (z_hl(2) - z_hl(1))
+    z_hl(klev+1) = z_fl(klev) + (z_fl(klev) - z_hl(klev))
 
     ! Full-level pressures in [Pa], Factor of 100 for hPa -> Pa
     pp_fl = ellingson(2,:)*100._wp
@@ -142,6 +161,15 @@ PROGRAM rrtm_driver
     ! Specific humidity profile in [kg kg-1]
     xm_vap = ellingson(6,:)
 
+    ! >> sylvia_20200618, Test the integration capability.
+    ! Find the tropopause to prevent non-monotonicity in x.
+    tropopause  = MINLOC(tk_hl)
+    CWVC = INTEGRATE(pp_hl(tropopause(1):81),xm_vap(tropopause(1):81)/(densAir*g),2.e4_wp,1.013e5_wp)
+    ! Find also the levels corresponding to the input temperatures.
+    indx_top    = tropopause + MINLOC(ABS(tk_hl(tropopause(1):81)-T_top))
+    indx_bottom = tropopause + MINLOC(ABS(tk_hl(tropopause(1):81)-T_bottom))
+    ! << sylvia_20200618
+
     ! Specific cloud liquid profile in [kg kg-1]
     xm_liq(:)  = 0._wp
 
@@ -154,7 +182,33 @@ PROGRAM rrtm_driver
               & 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, &
               & 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, &
               & 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp /)
-    xm_ice(indx) = qi_val
+    ! >> sylvia_20200619, Ice cloud injected as a step function.
+    ! IWP is the integral of this cloud ice mass. Factor of 1000 to convert to [g m-2].
+    qi_val = IWP_param / ( densAir * (z_hl(indx_top(1)) - z_hl(indx_bottom(1))) )
+    print*,'qi_val ',qi_val
+    ! Be aware that the qi value is quite different if we assume hydrostasy.
+    !qi_val2 = IWP_param * g / ( pp_hl(indx_bottom(1)) - pp_hl(indx_top(1)) )
+    DO i = indx_top(1), indx_bottom(1), 1
+       xm_ice(i) = qi_val
+    END DO
+
+    ! >> sylvia_20200620
+    ! IWP constraint check with Hermitian polynomials.
+    ALLOCATE(integ(tropopause(1):81))
+    integ = xm_ice(81:tropopause(1):-1)
+    IWP_z = INTEGRATE(z_hl(81:tropopause(1):-1), integ*densAir, &
+                    & z_hl(indx_bottom(1)), z_hl(indx_top(1)))
+    print*,'IWP Hermitian polynomial: ',IWP_z*1000._wp
+    !IWP_p = INTEGRATE(pp_hl(tropopause(1):81), integ/g, pp_hl(indx_top(1)), pp_hl(indx_bottom(1)))
+    !print*,IWP_p*1000._wp
+
+    ALLOCATE(integ2(indx_top(1):indx_bottom(1)))
+    integ2 = xm_ice(indx_top(1):indx_bottom(1))
+    print*,'IWP trapezoid rule: ',&
+         & TRAPEZOID_RULE2(z_hl(indx_bottom(1):indx_top(1):-1), integ2*densAir)*1000._wp
+    !print*,TRAPEZOID_RULE2(pp_hl(indx_top(1):indx_bottom(1)), integ2/g)*1000._wp
+    print*,'IWP parameter: ',IWP_param*1000._wp    ! Factor of 1000 for [g m-2] and comparison.
+    ! << sylvia_20200619
 
     ! Cloud droplet number concentration [m-3], 0.1 cm-3 below
     ! For some reason I don't yet understand, we need a non-zero value below to avoid runtime errors.
@@ -231,17 +285,17 @@ PROGRAM rrtm_driver
     ! Output the fluxes
     writeoutput = .true.
     if (writeoutput .eqv. .true.) then
-        open(unit=1,file='lwflxatm-test' // trim(file_tag) // '.txt',status='new')
+        open(unit=1,file='lwflxatm-' // trim(file_tag) // '.txt',status='new')
         write(1,*) flx_lw_net
         write(1,*) flx_lw_net_clr
         close(1)
 
-        open(unit=2,file='swflxatm-test' // trim(file_tag) // '.txt',status='new')
+        open(unit=2,file='swflxatm-' // trim(file_tag) // '.txt',status='new')
         write(2,*) flx_sw_net
         write(2,*) flx_sw_net_clr
         close(2)
 
-        open(unit=3,file='flxsfc-test' // trim(file_tag) // '.txt',status='new')
+        open(unit=3,file='flxsfc-' // trim(file_tag) // '.txt',status='new')
         write(3,*) flx_uplw_sfc
         write(3,*) flx_uplw_sfc_clr
         write(3,*) flx_upsw_sfc
@@ -262,3 +316,4 @@ PROGRAM rrtm_driver
     !write(*,*) '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
 
 END PROGRAM rrtm_driver
+
