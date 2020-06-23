@@ -15,7 +15,7 @@ do
      c=$((c+1))
      IWP=${line}
      echo $IWP
-     ./rrtm_driver "IWP"${cstr}"_TLO" $IWP
+     ./rrtm_driver "IWP"${cstr}"_THI" $IWP
 done <"$file"
 
 # Fixed IWP and warm the cloud top temperature to 231 K.

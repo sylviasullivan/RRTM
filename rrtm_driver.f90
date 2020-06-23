@@ -20,8 +20,8 @@ PROGRAM rrtm_driver
     ! >> sylvia_20200520
     REAL, DIMENSION(9,81)  :: ellingson
     INTEGER                :: i, indx_top(1), indx_bottom(1)  ! >> sylvia_20200617
-    INTEGER, PARAMETER     :: T_top    = 200
-    INTEGER, PARAMETER     :: T_bottom = 218                 ! >> sylvia_20200619
+    INTEGER, PARAMETER     :: T_top    = 219
+    INTEGER, PARAMETER     :: T_bottom = 237                 ! >> sylvia_20200619
     REAL(wp)               :: qi_val, qi_val2
     REAL(wp)               :: sDeclin, delJ, J, L0, L1, L2, L3, lonn
     REAL(wp)               :: sidereal, LHA, taud
