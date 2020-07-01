@@ -20,8 +20,8 @@ PROGRAM rrtm_driver
     ! >> sylvia_20200520
     REAL, DIMENSION(9,81)  :: ellingson
     INTEGER                :: i, indx_top(1), indx_bottom(1)  ! >> sylvia_20200617
-    INTEGER, PARAMETER     :: T_top    = 219
-    INTEGER, PARAMETER     :: T_bottom = 237                 ! >> sylvia_20200619
+    INTEGER                :: T_top                      ! >> sylvia_20200701, PARAMETER no more
+    INTEGER                :: T_bottom                   ! >> sylvia_20200701, PARAMETER no more
     REAL(wp)               :: qi_val, qi_val2
     REAL(wp)               :: sDeclin, delJ, J, L0, L1, L2, L3, lonn
     REAL(wp)               :: sidereal, LHA, taud
@@ -95,9 +95,8 @@ PROGRAM rrtm_driver
     END DO
     READ(args(1),*) file_tag
     READ(args(2),*) IWP_param
-    !READ(args(2),*) T_top
-    !READ(args(3),*) T_bottom
-    !READ(args(4),*) qi_val
+    READ(args(3),*) T_top
+    READ(args(4),*) T_bottom
     ! << sylvia_20200528
 
     ! Consider an ocean surface with low albedo at 7 pm in the tropics.
