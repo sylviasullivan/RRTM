@@ -15,10 +15,7 @@ lev = 81
 cp = 1.08*10**(3)
 # Gravity [m s-2]
 g = 9.8
-# Temperatures at which qi was perturbed
-#tt = np.asarray([196,197,199,200,202,204,205,207,209,210,212,214,215,217,\
-#        218,220,222,225,227,229,230,232,234,235,237,239,240,242,244,\
-#         245,247,249,251,252,254,256,257,260,261,262,264,266,267,269])
+# Cloud top and bottom temperatures.
 tt = np.arange(200,232)
 tb = np.arange(206,238)
 
@@ -35,6 +32,8 @@ pp_hl[81] = pp_fl[80] + (pp_fl[80] - pp_hl[80])
 tt_hl = ellingson[:,2]
 melting_layer = np.argmin(np.abs(tt_hl - 273.15))
 tropopause = np.argmin(tt_hl)
+t200 = np.argmin(np.abs(tt_hl[tropopause:]-200))
+t237 = np.argmin(np.abs(tt_hl[tropopause:]-237))
 
 fs = 13
 
@@ -83,52 +82,72 @@ for j,iwp in enumerate(IWP):
        dIWP[j-1] = IWP[j] - IWP[j-1]
 
 # Sensitivity of the LW/SW heating to Tt/Tb (1-K perturbations).
+# Can be conceptualized moving from lower to upper atm or vice versa....
 dHdT = np.zeros((6,H.shape[1]-1,H.shape[2]))
-for j in np.arange(H.shape[1]-1):
-    dHdT[:4,j] = (H[:4,j+1] - H[:4,j])
-    dHdT[4:,j] = (H[4:,j+1] - H[4:,j])/dIWP[j]
-    print(H[0,j+1])
-    print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-    print(H[0,j])
-    print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-    time.sleep(5) 
+for j in np.arange(H.shape[1]-1,0,-1):
+    print(j)
+    dHdT[:4,j-1] = -1*(H[:4,j] - H[:4,j-1])
+#for j in np.arange(H.shape[1]-1):
+#    dHdT[:4,j] = (H[:4,j+1] - H[:4,j])
+#    dHdT[4:,j] = (H[4:,j+1] - H[4:,j])/dIWP[j]
 
-#np.savetxt('dHdT_LW_Tb.txt',dHdT[0,:,tropopause+3:49])
+# x-tick labels become more complicated as some columns are zero.
+xtlbl = [[] for i in np.arange(3)]
+
+# The same columns are all 0 for the LW/SW fluxes from the Tt tests.
+idx = np.argwhere(np.all(dHdT[0]==0,axis=1))
+dHdT_Tb = np.zeros((2,dHdT.shape[1]-len(idx),dHdT.shape[2]))
+dHdT_Tb[:2] = np.delete(dHdT[:2],idx,axis=1)
+xtlbl[0] = tb[np.argwhere(~np.all(dHdT[0]==0,axis=1))[:,0]]
+
+# The same columns are all 0 for the LW/SW fluxes from the Tb tests.
+idx = np.argwhere(np.all(dHdT[2]==0,axis=1))
+dHdT_Tt = np.zeros((2,dHdT.shape[1]-len(idx),dHdT.shape[2]))
+dHdT_Tt[:2] = np.delete(dHdT[2:4],idx,axis=1)
+xtlbl[1] = tt[np.argwhere(~np.all(dHdT[2]==0,axis=1))[:,0]]
+
+# The third set of x-tick labels are IWP values. Factor of 1000 for g kg-1.
+xtlbl[2] = [round(i*1000,2) for i in IWP]
 
 for i in np.arange(6):
-    print(np.nanmin(dHdT[i]),np.nanmax(dHdT[i]))
+    print('min / max of sens matrix row ' + str(i) + ': ' + str(np.nanmin(dHdT[i])) + '  ' + str(np.nanmax(dHdT[i])))
 
-fig, ax = plt.subplots(nrows=3,ncols=2,figsize=(11,11))
+fig, ax = plt.subplots(nrows=2,ncols=3,figsize=(11,11))
+
 # Some formatting factors for the plot.. fontsize, tick intervals, and iterator.
 fs = 13
-interval = 5
-interval2 = 8
 c = 0
-mm = np.array([[-1.1,1.1],[-0.1,0.1],[-1.1,1.1],[-0.1,0.1],[-2.5,7.5],[-5,7.5]])
-#ticz = np.array([[-1,-0.1,0,0.1,1],[-0.1,-0.01,0,0.01,0.1],[-1,-0.1,0,0.1,1],[-0.1,-0.01,0,0.01,0.1]])
+mm = np.array([[-1.1,1.1],[-1.1,1.1],[-2.5,7.5],[-0.1,0.1],[-0.1,0.1],[-5,7.5]])
 lwsw = ['LW','SW']
+xlbl = [r'$T_b$ with $T_t$ = 200 K',r'$T_t$ with $T_b$ = 237 K','IWP [g kg$^{-1}$']
 lbl = [r'K day$^{-1}$ K$^{-1}$',r'K day$^{-1}$ K$^{-1}$',r'K day$^{-1}$ K$^{-1}$',\
        r'K day$^{-1}$ K$^{-1}$',r'K day$^{-1}$ per g kg$^{-1}$',r'K day$^{-1}$ per g kg$^{-1}$']
 
-yt_tt_hl = np.array([int(t) for t in tt_hl[::interval2]])
-yt_pp_hl = np.array([int(t) for t in pp_hl[::interval]])
-xt_tt = np.array([int(t) for t in tt[::interval]])
+yt_tt_hl = np.array([int(t) for t in tt_hl[tropopause+3:49:5]])
+field = [dHdT_Tb[0], dHdT_Tt[0], dHdT[4], dHdT_Tb[1], dHdT_Tt[1], dHdT[5]]
 
-for i in np.arange(3):
-    for j in np.arange(2):
-        sns.heatmap(dHdT[c].T,cmap=cm.bwr,ax=ax[i,j],norm=MidpointNormalize(midpoint=0.,vmin=mm[c,0],vmax=mm[c,1]),\
-                   xticklabels=xt_tt,yticklabels=yt_tt_hl,cbar_kws={'label':lbl[c]})
-        # Where is the melting layer?
-        ax[i,j].plot([0,tt.shape[0]],[melting_layer,melting_layer],linewidth=1,color='k',linestyle='--')
-        # Where is the tropopause?
-        ax[i,j].plot([0,tt.shape[0]],[tropopause,tropopause],linewidth=1,color='k',linestyle='--')
+for i in np.arange(2):
+    for j in np.arange(3):
+        sns.heatmap(field[c].T,cmap=cm.bwr,ax=ax[i,j],norm=MidpointNormalize(midpoint=0.,vmin=mm[c,0],vmax=mm[c,1]),\
+                   cbar_kws={'label':lbl[c]})
+
         # Adjust tick labels
-        ax[i,j].set_xticks(np.arange(0,tt.shape[0],interval))
-        ax[i,j].set_xticklabels(ax[i,j].get_xticklabels(),rotation=45,fontsize=fs-2)
-        ax[i,j].set_yticks(np.arange(0,tt_hl.shape[0],interval2))
-        ax[i,j].set_yticklabels(ax[i,j].get_yticklabels(),rotation=45,fontsize=fs-2) 
+        if j == 0:
+           ax[i,j].set_ylabel('Temperature [K]',fontsize=fs)
+        if i == 1:
+           ax[i,j].set_xlabel(xlbl[j],fontsize=fs)
+
         ax[i,j].set_ylim([49,tropopause+3]) # ylim is done based on indices not values.
-        ax[i,j].set_xlabel('Level of $q_i$ perturbation [K]',fontsize=fs)
+        ax[i,j].set_yticks(np.arange(tropopause+3,49,5))
+        ax[i,j].set_yticklabels(yt_tt_hl,rotation=45,fontsize=fs-2)
+        ax[i,j].set_xticks(np.arange(0,len(xtlbl[j]),2))  # Label every 2nd tick.
+        ax[i,j].set_xticklabels(xtlbl[j][::2],rotation=45,fontsize=fs-2)
+
+        # Where is 200 K?
+        ax[i,j].plot([0,len(xtlbl[j])],[t200+tropopause,t200+tropopause],linewidth=1,color='k',linestyle='--')
+        # Where is 237 K?
+        ax[i,j].plot([0,len(xtlbl[j])],[t237+tropopause+3,t237+tropopause+3],linewidth=1,color='k',linestyle='--')
+
         c = c + 1
 
 #fig.savefig('../figures/heating_matrix_qi2.pdf',bbox_inches='tight')
