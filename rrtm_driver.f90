@@ -20,8 +20,10 @@ PROGRAM rrtm_driver
     ! >> sylvia_20200520
     REAL, DIMENSION(9,81)  :: ellingson
     INTEGER                :: i, indx_top(1), indx_bottom(1)  ! >> sylvia_20200617
-    INTEGER                :: T_top                      ! >> sylvia_20200701, PARAMETER no more
-    INTEGER                :: T_bottom                   ! >> sylvia_20200701, PARAMETER no more
+    REAL(wp)               :: T_top                      ! >> sylvia_20200701, PARAMETER no more
+    REAL(wp)               :: T_bottom                   ! >> sylvia_20200701, PARAMETER no more
+    INTEGER                :: which                      ! >> sylvia_20200701, Which variable to perturb?
+                                                         ! 1 = IWP, 2 = T_top, 3 = T_bottom
     REAL(wp)               :: qi_val, qi_val2
     REAL(wp)               :: sDeclin, delJ, J, L0, L1, L2, L3, lonn
     REAL(wp)               :: sidereal, LHA, taud
@@ -77,7 +79,7 @@ PROGRAM rrtm_driver
     ! Pass in four inputs as alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif
     INTEGER  :: num_args, ix
     CHARACTER(LEN=12), DIMENSION(:), ALLOCATABLE :: args
-    CHARACTER(LEN=9) :: file_tag
+    CHARACTER(LEN=10) :: file_tag
     ! >> sylvia_20200618, To calculate column-integrated vapor or condensate (CWVC or IWP).
     REAL(wp)            :: CWVC, IWP_p, IWP_z  ! >> sylvia_20200622, Testing z and p integral equivalence
     REAL(wp), DIMENSION(:), ALLOCATABLE :: integ, integ2
@@ -97,7 +99,21 @@ PROGRAM rrtm_driver
     READ(args(2),*) IWP_param
     READ(args(3),*) T_top
     READ(args(4),*) T_bottom
+    READ(args(5),*) which
     ! << sylvia_20200528
+
+    ! >> sylvia_20200701, Perturbation simulations increase the value
+    IF (which == 0) THEN
+       IWP_param = IWP_param*1.01_wp
+    ELSE IF (which == 1) THEN
+       T_top = T_top*1.01_wp
+    ELSE IF (which == 2) THEN
+       T_bottom = T_bottom*1.01_wp
+    ELSE
+       write(*,*) 'which parameter out of bounds.'
+       STOP
+    END IF
+    ! << sylvia_202000701
 
     ! Consider an ocean surface with low albedo at 7 pm in the tropics.
     alb_vis_dir = 0.05_wp

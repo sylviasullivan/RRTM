@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#make clean; make
+make clean; make
 
 # Fixed 'low' / 'high' set of cloud top and bottom temperatures.
 file="IWP_iterator.txt"
@@ -15,8 +15,8 @@ do
      c=$((c+1))
      IWP=${line}
 
-     ./rrtm_driver "IWP"${cstr}"_THIp" $IWP 200 218
-     ./rrtm_driver "IWP"${cstr}"_TLOp" $IWP 218 236
+     ./rrtm_driver "IWP"${cstr}"_THIp" $IWP 200 218 0
+     ./rrtm_driver "IWP"${cstr}"_TLOp" $IWP 218 236 0
 done <"$file"
 
 # Fixed IWP and warm the cloud top temperature to 231 K.
@@ -28,7 +28,7 @@ for CTT in {200..231}; do
        cstr=$c
     fi
     c=$((c+1))
-    ./rrtm_driver "Tt"${cstr}"__"$CTT"p.txt" 0.3 $CTT 237
+    ./rrtm_driver "Tt"${cstr}"__"$CTT"p.txt" 0.3 $CTT 237 1
 done
 
 # Fixed IWP and cool the cloud bottom temperature to 206 K.
@@ -39,7 +39,8 @@ for CBT in {206..237}; do
     else
        cstr=$c
     fi
-    ./rrtm_driver "Tb"${cstr}"__"$CBT"p.txt" 0.3 200 $CBT
+    c=$((c+1))
+    ./rrtm_driver "Tb"${cstr}"__"$CBT"p.txt" 0.3 200 $CBT 2
 done
 
 # Inject qi = 0.1 or 0.2 g kg-1 at different levels
