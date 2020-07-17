@@ -71,35 +71,35 @@ xtlbl[1] = tt
 IWP = np.loadtxt(basedir + '/output/IWP_iterator.txt')
 xtlbl[2] = [round(i*1000,2) for i in IWP]
 
-fig, ax = plt.subplots(nrows=1,ncols=3,figsize=(14,5))
+fig, ax = plt.subplots(nrows=1,ncols=1,figsize=(5,5))
 
 # Some formatting factors for the plot.. fontsize, tick intervals, and iterator.
 fs = 13
 xlbl = [r'$T_b$ with $T_t$ = 200 K',r'$T_t$ with $T_b$ = 237 K','IWP [g kg$^{-1}$]']
-lbl = ['','',r'K day$^{-1}$']
+lbl = [r'K day$^{-1}$','',r'K day$^{-1}$']
 xtinterval = 3 # Label every 3rd xtick.
 ytinterval = 5 # Label every 5th ytick.
 yt_tt_hl = np.array([round(t) for t in tt_hl[tropopause+3:49:ytinterval]])
 
 
 for j in np.arange(3):
-    sns.heatmap(H[j].T,cmap=cm.bwr,ax=ax[j],center=0.,vmin=-1.,vmax=1.8,cbar_kws={'label':lbl[j]})
+    sns.heatmap(H[j].T,cmap=cm.bwr,ax=ax,center=0.,vmin=-1.,vmax=1.8,cbar_kws={'label':lbl[j]})
 
     # Adjust tick labels
     if j == 0:
-       ax[j].set_ylabel('Temperature [K]',fontsize=fs)
-    ax[j].set_xlabel(xlbl[j],fontsize=fs)
+       ax.set_ylabel('Temperature [K]',fontsize=fs)
+    ax.set_xlabel(xlbl[j],fontsize=fs)
 
-    ax[j].set_ylim([49,tropopause+3])                   # ylim is done based on indices not values.
-    ax[j].set_yticks(np.arange(tropopause+3,49,ytinterval))
-    ax[j].set_yticklabels(yt_tt_hl,rotation=45,fontsize=fs-2)
-    ax[j].set_xticks(np.arange(0,H.shape[1],xtinterval))
-    ax[j].set_xticklabels(xtlbl[j][::xtinterval],rotation=45,fontsize=fs-2)
+    ax.set_ylim([49,tropopause+3])                   # ylim is done based on indices not values.
+    ax.set_yticks(np.arange(tropopause+3,49,ytinterval))
+    ax.set_yticklabels(yt_tt_hl,rotation=45,fontsize=fs-2)
+    ax.set_xticks(np.arange(0,H.shape[1],xtinterval))
+    ax.set_xticklabels(xtlbl[j][::xtinterval],rotation=45,fontsize=fs-2)
 
     # Where is 200 K?
     #ax[j].plot([0,len(xtlbl[j])],[t200+tropopause,t200+tropopause],linewidth=1,color='k',linestyle='--')
     # Where is 237 K?
     #ax[j].plot([0,len(xtlbl[j])],[t237+tropopause+3,t237+tropopause+3],linewidth=1,color='k',linestyle='--')
 
-fig.savefig('../figures/lwheating_matrix_1.pdf',bbox_inches='tight')
+fig.savefig('../figures/lwheating_matrix.pdf',bbox_inches='tight')
 plt.show()
