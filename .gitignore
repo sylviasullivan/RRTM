@@ -1,0 +1,8 @@
+*.o
+*.mod
+/development
+h2o_ctm_Ts300_rh0.75_gamma7.nc
+/inputs
+/output
+scripts/MidpointNormalize.py
+rrtm_driver
